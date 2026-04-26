@@ -1,5 +1,7 @@
 # TranscribeHelper
 
+![TranscribeHelper Screenshot](misc/screenshot.png)
+
 A local web application for transcribing and editing music charts. Built with React + TypeScript + Vite, TranscribeHelper uses a custom `.chart` text format to represent chord progressions, lyrics, melody notes, and rhythm patterns in a clean, human-readable way.
 
 ## Features
