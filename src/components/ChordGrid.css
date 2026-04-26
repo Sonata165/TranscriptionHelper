@@ -1,0 +1,135 @@
+.chord-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.chord-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: -2px;
+}
+
+.chord-row:last-child {
+  margin-bottom: 0;
+}
+
+.chord-measure {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 2px solid #222;
+  border-bottom: 2px solid #222;
+  border-right: 1.5px solid #555;
+  min-height: 2.6rem;
+  position: relative;
+}
+
+.chord-measure:first-child {
+  border-left: 2px solid #222;
+}
+
+/* Adjacent real measures share the border — collapse it */
+.chord-measure + .chord-measure:not(.empty) {
+  border-left: none;
+}
+
+.chord-measure.empty {
+  border: none;
+  background: transparent;
+}
+
+.chord-measure.addable {
+  cursor: pointer;
+  position: relative;
+}
+
+.chord-measure.addable:hover {
+  background: #f4f4f4;
+}
+
+.add-bar-hint {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  color: #ccc;
+  pointer-events: none;
+  user-select: none;
+}
+
+.chord-measure.addable:hover .add-bar-hint {
+  display: flex;
+}
+
+/* Delete button — shown on measure hover */
+.delete-bar {
+  display: none;
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  width: 13px;
+  height: 13px;
+  font-size: 0.6rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: #bbb;
+  cursor: pointer;
+  padding: 0;
+  z-index: 5;
+  align-items: center;
+  justify-content: center;
+}
+
+.chord-measure:not(.empty):hover .delete-bar {
+  display: flex;
+}
+
+.delete-bar:hover {
+  color: #c0392b;
+}
+
+.chord-slot {
+  display: flex;
+  align-items: center;
+  padding: 0.2rem 0.15rem;
+  font-family: 'Georgia', serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #111;
+  cursor: pointer;
+  /* allow long chord names to bleed into adjacent empty slots */
+  white-space: nowrap;
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+  user-select: none;
+}
+
+/* only add hover highlight when the slot has a real chord */
+.chord-slot.has-chord:hover {
+  background: #f0f4ff;
+}
+
+/* sustain slots are invisible — chord text from prior slot can bleed through */
+.chord-slot.sustain {
+  background: transparent;
+  z-index: 0;
+}
+
+.chord-slot-input {
+  width: 100%;
+  padding: 0.15rem 0.15rem;
+  font-family: 'Georgia', serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border: 2px solid #4a90d9;
+  border-radius: 2px;
+  outline: none;
+  background: #eef4ff;
+  min-width: 0;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 2;
+}

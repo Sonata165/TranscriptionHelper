@@ -1,0 +1,82 @@
+title: 夏天的风
+originalKey: D
+key: D
+time: 4/4
+tempo: 120
+
+[Intro]
+chord:
+| G      | A      | D - Fm7 | B      |
+| E      | A      | D      | -      |
+
+[A1]
+chord:
+| G      | A      | Bm7 - - | D/F#   |
+| G      | A      | Bm7    | Bm7 D  |
+| G      | A - -  | Bm7    | D/F# - - |
+| G      | A      | Bm7    | -      |
+| Em7    | A/C#   | F#m    | Bm7    |
+| Em7    | D      | G      | A      |
+
+lyric:
+The falling leaves drift by my window
+The autumn leaves of red and gold
+I see your lips the summer kisses
+The sunburned hands I used to hold
+
+rhythm:
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+
+[B1]
+chord:
+| G      | A/G    | F#m    | Bm7    |
+| Em7    | A      | D      | - D/F# |
+| G      | A/G    | F#m    | Bm7    |
+| Em7    | A      | D      | -      |
+
+rhythm:
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+
+[C]
+chord:
+| G      | A      | Bm7    | D      |
+| G      | A      | Bm7    | D      |
+| G      | A      | Bm7    | F#m    |
+| G      | A      | D      | -      |
+| Em7    | A/C#   | F#m7   | Bm7    |
+| Em7    | F#     | G      | -      |
+
+rhythm:
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+| B - O - B - O - | B - O - B - O - | B - O - B - O - | B - O - B - O - |
+
+[B2]
+chord:
+| G      | A/G    | F#m    | Bm7    |
+| Em7    | A      | D      | - - D/F# |
+| G      | A/G    | F#m    | Bm7    |
+| Em7    | A      | D      | -      |
+
+[B3]
+chord:
+| G      | A/G    | F#m    | Bm7    |
+| Em7    | A      | D      | - - D/F# |
+| G      | A/G    | F#m    | Bm7    |
+| Em7    | A      | D      | -      |
+
+[Outro]
+chord:
+| G      | A      | Bm7 - - | F#m    |
+| G      | A      | Bm11   | Bm7 -  |

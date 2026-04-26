@@ -1,0 +1,298 @@
+.song-view {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  background: #fff;
+  color: #111;
+}
+
+.song-header {
+  margin-bottom: 2rem;
+  border-bottom: 3px solid #111;
+  padding-bottom: 0.75rem;
+}
+
+.song-title {
+  font-family: 'Georgia', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  cursor: pointer;
+}
+
+.song-title:hover {
+  background: #fffbe6;
+}
+
+.song-title-input {
+  display: block;
+  width: 100%;
+  border: 1px solid #c8a000;
+  border-radius: 2px;
+  outline: none;
+  background: #fffbe6;
+  padding: 0.1rem 0.25rem;
+  box-sizing: border-box;
+}
+
+.song-meta {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #555;
+  font-family: 'Courier New', monospace;
+}
+
+.song-meta-key-group {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.transpose-btn {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0 0.2rem;
+  line-height: 1;
+}
+
+.transpose-btn:hover {
+  color: #444;
+}
+
+.song-meta-field {
+  cursor: pointer;
+  padding: 0.1rem 0.2rem;
+  border-radius: 2px;
+}
+
+.song-meta-field:hover {
+  background: #fffbe6;
+}
+
+.song-meta-input {
+  border: 1px solid #c8a000;
+  border-radius: 2px;
+  outline: none;
+  background: #fffbe6;
+  padding: 0.1rem 0.2rem;
+  font-size: 0.9rem;
+  font-family: 'Courier New', monospace;
+  width: 5rem;
+}
+
+.song-section {
+  margin-bottom: 1rem;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0 0 0.4rem;
+}
+
+.section-name {
+  font-family: 'Georgia', serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #777;
+  margin: 0;
+  cursor: pointer;
+}
+
+.section-name:hover {
+  color: #444;
+}
+
+.section-name-input {
+  border: 1px solid #c8a000;
+  border-radius: 2px;
+  outline: none;
+  background: #fffbe6;
+  padding: 0.1rem 0.25rem;
+  width: 12rem;
+}
+
+.delete-section {
+  opacity: 0;
+  width: 1rem;
+  height: 1rem;
+  font-size: 0.8rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: #bbb;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.section-title-row:hover .delete-section {
+  opacity: 1;
+}
+
+.delete-section:hover {
+  color: #c0392b;
+}
+
+/* chart-row wraps one chord row + its optional rhythm/lyric/melody */
+.chart-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.chart-row:last-child {
+  margin-bottom: 0;
+}
+
+.chart-row-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Delete row gutter — always present to the right, hover reveals button */
+.delete-row-zone {
+  width: 1.4rem;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding-top: 0.4rem;
+}
+
+.delete-row {
+  opacity: 0;
+  width: 1rem;
+  height: 1rem;
+  font-size: 0.8rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: #bbb;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-row-zone:hover .delete-row {
+  opacity: 1;
+}
+
+.delete-row:hover {
+  color: #c0392b;
+}
+
+.clear-rhythm {
+  opacity: 0;
+  margin-top: 0.3rem;
+}
+
+/* Align clear-rhythm button with rhythm row when split button is absent */
+.delete-row-zone > .clear-rhythm:nth-child(2) {
+  margin-top: 1.3rem;
+}
+
+.delete-row-zone:hover .clear-rhythm {
+  opacity: 1;
+}
+
+/* Section add bar */
+.section-prepend-bar {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.section-add-bar {
+  display: flex;
+  height: 1rem;
+  margin-top: 0.25rem;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.section-add-half {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: #fff;
+}
+
+.section-add-half:hover {
+  background: #f0f4ff;
+}
+
+.section-add-hint {
+  display: none;
+  font-size: 0.7rem;
+  color: #aaa;
+  pointer-events: none;
+  user-select: none;
+}
+
+.section-add-half:hover .section-add-hint {
+  display: block;
+}
+
+.lyric-line {
+  font-family: 'Georgia', serif;
+  font-size: 0.88rem;
+  color: #444;
+  margin: 0.3rem 0 0;
+  font-style: italic;
+  padding-left: 0.25rem;
+}
+
+.editable-line {
+  cursor: pointer;
+  min-height: 1.4em;
+}
+
+.editable-line:hover {
+  background: #fffbe6;
+}
+
+.empty-line {
+  opacity: 0.4;
+}
+
+.line-placeholder {
+  font-style: normal;
+  color: #aaa;
+  font-size: 0.8em;
+}
+
+.editable-line-input {
+  display: block;
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.15rem 0.25rem;
+  border: 1px solid #c8a000;
+  border-radius: 2px;
+  outline: none;
+  background: #fffbe6;
+  box-sizing: border-box;
+}
+
+.melody-line {
+  font-family: 'Courier New', monospace;
+  font-size: 0.82rem;
+  color: #336;
+  margin: 0.2rem 0 0;
+  padding-left: 0.25rem;
+}
