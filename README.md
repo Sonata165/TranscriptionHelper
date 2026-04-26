@@ -1,8 +1,8 @@
-# TranscribeHelper
+# TranscriptionHelper
 
-![TranscribeHelper Screenshot](misc/screenshot.png)
+![TranscriptionHelper Screenshot](misc/screenshot.png)
 
-A local web application for transcribing and editing music charts. Built with React + TypeScript + Vite, TranscribeHelper uses a custom `.chart` text format to represent chord progressions, lyrics, melody notes, and rhythm patterns in a clean, human-readable way.
+A local web application for transcribing and editing music charts. Built with React + TypeScript + Vite, TranscriptionHelper uses a custom `.chart` text format to represent chord progressions, lyrics, melody notes, and rhythm patterns in a clean, human-readable way.
 
 ## Features
 
@@ -76,7 +76,7 @@ npm run preview
 
 ## The `.chart` File Format
 
-TranscribeHelper uses a custom plain-text format. Files are stored in the `songs/` directory.
+TranscriptionHelper uses a custom plain-text format. Files are stored in the `songs/` directory.
 
 ### Example
 
@@ -165,7 +165,7 @@ vite.config.ts             # Dev server with API middleware
 
 ## 中文说明
 
-# TranscribeHelper - 音乐转谱助手
+# TranscriptionHelper - 音乐转谱助手
 
 一个本地运行的音乐转谱和编辑工具。使用 React + TypeScript + Vite 构建，采用自定义的 `.chart` 纯文本格式来记录和弦进行、歌词、旋律和节奏型。
 
