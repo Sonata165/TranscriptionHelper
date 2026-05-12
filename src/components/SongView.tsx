@@ -49,6 +49,132 @@ function EditableLine({ value, className, onChange }: {
   )
 }
 
+function MelodySlot({ value, onChange, shouldFocus, onFocused, onTabNext, onShiftTabPrev }: {
+  value: string
+  onChange: (v: string) => void
+  shouldFocus?: boolean
+  onFocused?: () => void
+  onTabNext?: () => void
+  onShiftTabPrev?: () => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { if (editing) inputRef.current?.select() }, [editing])
+
+  useEffect(() => {
+    if (shouldFocus) {
+      setDraft(value)
+      setEditing(true)
+      onFocused?.()
+    }
+  }, [shouldFocus]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function normalize(s: string): string {
+    return s.trim().replace(/\s{2,}/g, ' ')
+  }
+
+  function commit() {
+    setEditing(false)
+    const normalised = normalize(draft)
+    if (normalised !== value) onChange(normalised)
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        className="melody-slot-input"
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={() => {
+          const normalised = normalize(draft)
+          if (normalised !== value) onChange(normalised)
+          if (document.hasFocus()) setEditing(false)
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); commit(); onTabNext?.() }
+          if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); commit(); onShiftTabPrev?.() }
+          if (e.key === 'Enter') { e.preventDefault(); commit() }
+          if (e.key === 'Escape') setEditing(false)
+        }}
+      />
+    )
+  }
+
+  return (
+    <div
+      className={`melody-slot${value === '' ? ' melody-empty' : ''}`}
+      onClick={() => { setDraft(value); setEditing(true) }}
+    >
+      {value || <span className="melody-placeholder">…</span>}
+    </div>
+  )
+}
+
+function MelodyRow({ measures, measureCount, sectionIdx, rowIdx, onMelodyChange, onTabOut, onShiftTabOut, shouldFocusFirst, onFocusedFirst, shouldFocusLast, onFocusedLast }: {
+  measures: string[]
+  measureCount: number
+  sectionIdx: number
+  rowIdx: number
+  onMelodyChange: (sectionIdx: number, rowIdx: number, colIdx: number, value: string) => void
+  onTabOut?: () => void
+  onShiftTabOut?: () => void
+  shouldFocusFirst?: boolean
+  onFocusedFirst?: () => void
+  shouldFocusLast?: boolean
+  onFocusedLast?: () => void
+}) {
+  const MEASURES_PER_ROW = 4
+  const [pendingFocus, setPendingFocus] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (shouldFocusFirst) { setPendingFocus(0); onFocusedFirst?.() }
+  }, [shouldFocusFirst]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (shouldFocusLast) { setPendingFocus(measureCount - 1); onFocusedLast?.() }
+  }, [shouldFocusLast]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const padded = Array.from({ length: MEASURES_PER_ROW }, (_, i) =>
+    i < measureCount ? (measures[i] ?? '') : null
+  )
+
+  function tabNext(colIdx: number) {
+    let next = colIdx + 1
+    while (next < measureCount && padded[next] === null) next++
+    if (next < measureCount) setPendingFocus(next)
+    else onTabOut?.()
+  }
+
+  function tabPrev(colIdx: number) {
+    let prev = colIdx - 1
+    while (prev >= 0 && padded[prev] === null) prev--
+    if (prev >= 0) setPendingFocus(prev)
+    else onShiftTabOut?.()
+  }
+
+  return (
+    <div className="melody-row">
+      {padded.map((val, colIdx) => {
+        if (val === null) return <div key={colIdx} className="melody-measure empty" />
+        return (
+          <MelodySlot
+            key={colIdx}
+            value={val}
+            onChange={v => onMelodyChange(sectionIdx, rowIdx, colIdx, v)}
+            shouldFocus={pendingFocus === colIdx}
+            onFocused={() => setPendingFocus(null)}
+            onTabNext={() => tabNext(colIdx)}
+            onShiftTabPrev={() => tabPrev(colIdx)}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
 interface Props {
   song: Song
   showLyric?: boolean
@@ -57,7 +183,7 @@ interface Props {
   onChordChange: (sectionIdx: number, rowIdx: number, colIdx: number, slotIdx: number, value: string) => void
   onRhythmChange: (sectionIdx: number, rowIdx: number, colIdx: number, slotIdx: number, value: RhythmSlot) => void
   onLyricChange: (sectionIdx: number, lineIdx: number, value: string) => void
-  onMelodyChange: (sectionIdx: number, lineIdx: number, value: string) => void
+  onMelodyChange: (sectionIdx: number, rowIdx: number, colIdx: number, value: string) => void
   onAddMeasure: (sectionIdx: number, rowIdx: number) => void
   onDeleteMeasure: (sectionIdx: number, rowIdx: number, colIdx: number) => void
   onAddRow: (sectionIdx: number) => void
@@ -168,6 +294,7 @@ export function SongView({
 }: Props) {
   const { meta, sections } = song
   const [pendingFocusRow, setPendingFocusRow] = useState<{si: number, ri: number, last?: boolean} | null>(null)
+  const [pendingMelodyFocus, setPendingMelodyFocus] = useState<{si: number, ri: number, last?: boolean} | null>(null)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -196,6 +323,23 @@ export function SongView({
     } else if (si - 1 >= 0) {
       const prevLen = sections[si - 1].chords.length
       setPendingFocusRow({ si: si - 1, ri: prevLen - 1, last: true })
+    }
+  }
+
+  function melodyTabToNextRow(si: number, ri: number) {
+    if (ri + 1 < sections[si].chords.length) {
+      setPendingMelodyFocus({ si, ri: ri + 1 })
+    } else if (si + 1 < sections.length) {
+      setPendingMelodyFocus({ si: si + 1, ri: 0 })
+    }
+  }
+
+  function melodyTabToPrevRow(si: number, ri: number) {
+    if (ri - 1 >= 0) {
+      setPendingMelodyFocus({ si, ri: ri - 1, last: true })
+    } else if (si - 1 >= 0) {
+      const prevLen = sections[si - 1].chords.length
+      setPendingMelodyFocus({ si: si - 1, ri: prevLen - 1, last: true })
     }
   }
 
@@ -285,10 +429,18 @@ export function SongView({
                     />
                   )}
                   {showMelody && (
-                    <EditableLine
-                      value={section.melody?.[rowIdx] ?? ''}
-                      className="melody-line"
-                      onChange={v => onMelodyChange(sectionIdx, rowIdx, v)}
+                    <MelodyRow
+                      measures={section.melody?.[rowIdx] ?? []}
+                      measureCount={rowMeasures.length}
+                      sectionIdx={sectionIdx}
+                      rowIdx={rowIdx}
+                      onMelodyChange={onMelodyChange}
+                      onTabOut={() => melodyTabToNextRow(sectionIdx, rowIdx)}
+                      onShiftTabOut={() => melodyTabToPrevRow(sectionIdx, rowIdx)}
+                      shouldFocusFirst={pendingMelodyFocus?.si === sectionIdx && pendingMelodyFocus?.ri === rowIdx && !pendingMelodyFocus?.last}
+                      onFocusedFirst={() => setPendingMelodyFocus(null)}
+                      shouldFocusLast={pendingMelodyFocus?.si === sectionIdx && pendingMelodyFocus?.ri === rowIdx && !!pendingMelodyFocus?.last}
+                      onFocusedLast={() => setPendingMelodyFocus(null)}
                     />
                   )}
                 </div>

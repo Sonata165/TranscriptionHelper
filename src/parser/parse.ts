@@ -28,6 +28,12 @@ function parseRhythmLine(line: string): RhythmMeasure[] {
   })
 }
 
+// Parse a melody row line like "| 1234 | 5678 |" → array of strings per measure
+function parseMelodyLine(line: string): string[] {
+  const parts = line.split('|').map(s => s.trim()).filter((_, i, arr) => i > 0 && i < arr.length - 1)
+  return parts.map(part => part.trim())
+}
+
 type BlockType = 'chord' | 'lyric' | 'melody' | 'rhythm' | null
 
 export function parseSong(text: string): Song {
@@ -77,6 +83,9 @@ export function parseSong(text: string): Song {
       } else if (currentBlock === 'rhythm') {
         if (!currentSection.rhythm) currentSection.rhythm = []
         currentSection.rhythm.push(parseRhythmLine(line))
+      } else if (currentBlock === 'melody') {
+        if (!currentSection.melody) currentSection.melody = []
+        currentSection.melody.push(parseMelodyLine(line))
       }
       continue
     }
@@ -88,8 +97,9 @@ export function parseSong(text: string): Song {
       continue
     }
     if (currentBlock === 'melody') {
+      // Legacy plain-text melody line — put entire text into a single measure
       if (!currentSection.melody) currentSection.melody = []
-      currentSection.melody.push(line.trim() === '-' ? '' : line.trim())
+      currentSection.melody.push([line.trim() === '-' ? '' : line.trim()])
       continue
     }
   }

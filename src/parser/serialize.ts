@@ -38,10 +38,12 @@ export function serializeSong(song: Song): string {
       for (const line of section.lyric) lines.push(line || '-')
     }
 
-    if (section.melody?.some(l => l)) {
+    if (section.melody?.some(row => row.some(m => m))) {
       lines.push('')
       lines.push('melody:')
-      for (const line of section.melody) lines.push(line || '-')
+      for (const row of section.melody) {
+        lines.push('| ' + row.map(m => (m || '-').padEnd(6)).join(' | ') + ' |')
+      }
     }
 
     if (section.rhythm) {

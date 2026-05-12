@@ -25,7 +25,7 @@ export interface Section {
   name: string
   chords: ChordMeasure[][]   // each sub-array is one row as written in the file
   lyric?: string[]           // one string per row, loosely aligned to chord rows
-  melody?: string[]          // one string per row, loosely aligned to chord rows
+  melody?: string[][]        // parallel to chords rows; melody[row][measure] = digit string
   rhythm?: RhythmMeasure[][] // parallel to chords rows
 }
 

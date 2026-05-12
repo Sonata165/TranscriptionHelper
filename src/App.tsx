@@ -8,10 +8,15 @@ import autumnLeavesRaw from '../songs/autumn-leaves.chart?raw'
 import './styles/global.css'
 
 export default function App() {
-  const [showLyric, setShowLyric] = useState(false)
-  const [showMelody, setShowMelody] = useState(false)
+  const [initialSong] = useState<Song>(() => parseSong(autumnLeavesRaw))
+  const [showLyric, setShowLyric] = useState(() => initialSong.sections.some(s => s.lyric?.some(l => l)))
+  const [showMelody, setShowMelody] = useState(() => {
+    const hasLyric = initialSong.sections.some(s => s.lyric?.some(l => l))
+    const hasMelody = initialSong.sections.some(s => s.melody?.some(row => row.some(m => m)))
+    return !hasLyric && hasMelody
+  })
   const [showRhythm, setShowRhythm] = useState(false)
-  const [song, setSong] = useState<Song>(() => parseSong(autumnLeavesRaw))
+  const [song, setSong] = useState<Song>(initialSong)
   const [currentFile, setCurrentFile] = useState('autumn-leaves.chart')
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const fileHandleRef = useRef<FileSystemFileHandle | null>(null)
@@ -31,7 +36,9 @@ export default function App() {
   function onChordChange(sectionIdx: number, rowIdx: number, colIdx: number, slotIdx: number, value: string) {
     setSong(prev => {
       const next = structuredClone(prev)
-      next.sections[sectionIdx].chords[rowIdx][colIdx].slots[slotIdx] = value
+      const measure = next.sections[sectionIdx].chords[rowIdx][colIdx]
+      while (measure.slots.length <= slotIdx) measure.slots.push('-')
+      measure.slots[slotIdx] = value
       return next
     })
   }
@@ -67,13 +74,15 @@ export default function App() {
     })
   }
 
-  function onMelodyChange(sectionIdx: number, lineIdx: number, value: string) {
+  function onMelodyChange(sectionIdx: number, rowIdx: number, colIdx: number, value: string) {
     setSong(prev => {
       const next = structuredClone(prev)
       const sec = next.sections[sectionIdx]
       if (!sec.melody) sec.melody = []
-      while (sec.melody.length <= lineIdx) sec.melody.push('')
-      sec.melody[lineIdx] = value
+      while (sec.melody.length <= rowIdx) sec.melody.push([])
+      const row = sec.melody[rowIdx]
+      while (row.length <= colIdx) row.push('')
+      row[colIdx] = value
       return next
     })
   }
@@ -88,6 +97,9 @@ export default function App() {
         const last = rr[rr.length - 1] ?? { slots: Array(8).fill('-') }
         rr.push(structuredClone(last))
       }
+      if (section.melody?.[rowIdx]) {
+        section.melody[rowIdx].push('')
+      }
       return next
     })
   }
@@ -98,6 +110,7 @@ export default function App() {
       const section = next.sections[sectionIdx]
       section.chords[rowIdx].splice(colIdx, 1)
       section.rhythm?.[rowIdx]?.splice(colIdx, 1)
+      section.melody?.[rowIdx]?.splice(colIdx, 1)
       return next
     })
   }
@@ -316,12 +329,29 @@ export default function App() {
     return next
   }
 
+  function autoShowLyricMelody(song: Song) {
+    const hasLyric = song.sections.some(s => s.lyric?.some(l => l))
+    const hasMelody = song.sections.some(s => s.melody?.some(row => row.some(m => m)))
+    if (hasLyric) {
+      setShowLyric(true)
+      setShowMelody(false)
+    } else if (hasMelody) {
+      setShowLyric(false)
+      setShowMelody(true)
+    } else {
+      setShowLyric(false)
+      setShowMelody(false)
+    }
+  }
+
   function loadFromText(filename: string, text: string) {
     localStorage.setItem('transcribe-last-file', filename)
     filePathRef.current = `songs/${filename}`
     fileHandleRef.current = null
     setCurrentFile(filename)
-    setSong(normalizeRhythm(parseSong(text)))
+    const parsed = normalizeRhythm(parseSong(text))
+    setSong(parsed)
+    autoShowLyricMelody(parsed)
   }
 
   async function openSong() {
@@ -433,6 +463,43 @@ export default function App() {
     } catch { /* cancelled */ }
   }
 
+  async function exportChordsAndMelody() {
+    const lines: string[] = []
+    lines.push(song.meta.title)
+    if (song.meta.key) lines.push(`Key: ${song.meta.key}`)
+    if (song.meta.time) lines.push(`Time: ${song.meta.time}`)
+    if (song.meta.tempo) lines.push(`Tempo: ${song.meta.tempo}`)
+    lines.push('')
+    for (const section of song.sections) {
+      lines.push(`[${section.name}]`)
+      for (let rowIdx = 0; rowIdx < section.chords.length; rowIdx++) {
+        const row = section.chords[rowIdx]
+        const measures = row.map(m => {
+          const tokens = m.slots.length > 0 ? m.slots : ['-']
+          return tokens.join(' ').padEnd(6)
+        })
+        lines.push('| ' + measures.join(' | ') + ' |')
+        const melodyRow = section.melody?.[rowIdx]
+        const melodyStr = melodyRow?.filter(m => m).join(' ') ?? ''
+        if (melodyStr) lines.push(melodyStr)
+      }
+      lines.push('')
+    }
+    const text = lines.join('\n')
+    const filename = song.meta.title.toLowerCase().replace(/\s+/g, '-') + '-chords-melody.txt'
+    if (!('showSaveFilePicker' in window)) { downloadFallback(text, filename); return }
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: filename,
+        startIn: dirHandleRef.current ?? 'documents',
+        types: [{ description: 'Text file', accept: { 'text/plain': ['.txt'] } }],
+      })
+      const writable = await handle.createWritable()
+      await writable.write(text)
+      await writable.close()
+    } catch { /* cancelled */ }
+  }
+
   return (
     <div className="app">
       {saveMessage && <div className="save-toast">{saveMessage}</div>}
@@ -446,6 +513,7 @@ export default function App() {
         <button onClick={refreshSong}>Refresh</button>
         <button onClick={() => window.print()}>Print / PDF</button>
         <button onClick={exportChords}>Export Chord</button>
+        <button onClick={exportChordsAndMelody}>Export Chord + Melody</button>
       </nav>
       <div className="app-body">
         <FileSidebar

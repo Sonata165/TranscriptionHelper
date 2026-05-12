@@ -20,7 +20,7 @@ chord:
 | G      | A      | Bm7 - - | F#m    |
 | Em     | A      | D      | - - F#m |
 | G      | A - -  | Bm7    | F#m - - |
-| E      | A      | D      | A      |
+| Em     | A      | D      | A      |
 
 lyric:
 七月的风懒懒的 连云都变热热的
@@ -78,7 +78,7 @@ rhythm:
 [D]
 chord:
 | G      | A      | Bm7    | F#m    |
-| G      | A      | D      | B C#m D |
+| G      | A      | D      | Bm C#m D |
 | G      | A      | Bm7    | F#m    |
 | Em7    | A      | D      | -      |
 
