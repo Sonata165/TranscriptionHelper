@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X DELETE \"http://localhost:5173/api/delete?file=risk-it-all-copy.chart\")"
     ]
   }
 }

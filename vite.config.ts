@@ -17,8 +17,15 @@ export default defineConfig({
           if (req.method !== 'GET') { res.statusCode = 405; res.end(); return }
           try {
             const files = fs.readdirSync(songsDir).filter(f => f.endsWith('.chart'))
+            const songs = files.map(f => {
+              try {
+                const text = fs.readFileSync(path.join(songsDir, f), 'utf-8')
+                const match = text.match(/^title:\s*(.+)/m)
+                return { filename: f, title: match?.[1]?.trim() || f.replace(/\.chart$/, '') }
+              } catch { return { filename: f, title: f.replace(/\.chart$/, '') } }
+            })
             res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify(files))
+            res.end(JSON.stringify(songs))
           } catch (e) {
             res.statusCode = 500; res.end(String(e))
           }

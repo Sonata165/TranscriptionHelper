@@ -23,6 +23,22 @@ export default function App() {
   const dirHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
   const filePathRef = useRef<string>('songs/autumn-leaves.chart')
   const saveSongRef = useRef<() => void>(() => {})
+  const suppressSaveRef = useRef(false)
+  const historyRef = useRef<Song[]>([])
+  const MAX_HISTORY = 50
+
+  function updateSong(updater: (prev: Song) => Song) {
+    setSong(prev => {
+      historyRef.current.push(structuredClone(prev))
+      if (historyRef.current.length > MAX_HISTORY) historyRef.current.shift()
+      return updater(prev)
+    })
+  }
+
+  function undo() {
+    const prev = historyRef.current.pop()
+    if (prev) setSong(prev)
+  }
 
   useEffect(() => {
     const last = localStorage.getItem('transcribe-last-file')
@@ -34,7 +50,7 @@ export default function App() {
   }, [])
 
   function onChordChange(sectionIdx: number, rowIdx: number, colIdx: number, slotIdx: number, value: string) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       const measure = next.sections[sectionIdx].chords[rowIdx][colIdx]
       while (measure.slots.length <= slotIdx) measure.slots.push('-')
@@ -44,7 +60,7 @@ export default function App() {
   }
 
   function onRhythmChange(sectionIdx: number, rowIdx: number, colIdx: number, slotIdx: number, value: RhythmSlot) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       const section = next.sections[sectionIdx]
       if (!section.rhythm) {
@@ -64,7 +80,7 @@ export default function App() {
   }
 
   function onLyricChange(sectionIdx: number, lineIdx: number, value: string) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       const sec = next.sections[sectionIdx]
       if (!sec.lyric) sec.lyric = []
@@ -75,7 +91,7 @@ export default function App() {
   }
 
   function onMelodyChange(sectionIdx: number, rowIdx: number, colIdx: number, value: string) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       const sec = next.sections[sectionIdx]
       if (!sec.melody) sec.melody = []
@@ -88,7 +104,7 @@ export default function App() {
   }
 
   function onAddMeasure(sectionIdx: number, rowIdx: number) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       const section = next.sections[sectionIdx]
       section.chords[rowIdx].push({ slots: ['-'] })
@@ -105,7 +121,7 @@ export default function App() {
   }
 
   function onDeleteMeasure(sectionIdx: number, rowIdx: number, colIdx: number) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       const section = next.sections[sectionIdx]
       section.chords[rowIdx].splice(colIdx, 1)
@@ -116,7 +132,7 @@ export default function App() {
   }
 
   function onDeleteSection(sectionIdx: number) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       next.sections.splice(sectionIdx, 1)
       return next
@@ -125,7 +141,7 @@ export default function App() {
 
   function onMergeUp(sectionIdx: number) {
     if (sectionIdx === 0) return
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       const above = next.sections[sectionIdx - 1]
       const curr  = next.sections[sectionIdx]
@@ -177,7 +193,7 @@ export default function App() {
   }
 
   function onTranspose(delta: number) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       if (!next.meta.originalKey && next.meta.key) {
         next.meta.originalKey = next.meta.key
@@ -196,7 +212,7 @@ export default function App() {
   }
 
   function onMergeDown(sectionIdx: number) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       if (sectionIdx >= next.sections.length - 1) return next
       const curr  = next.sections[sectionIdx]
@@ -214,7 +230,7 @@ export default function App() {
   }
 
   function onRenameSection(sectionIdx: number, name: string) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       next.sections[sectionIdx].name = name
       return next
@@ -222,7 +238,7 @@ export default function App() {
   }
 
   function onAddRow(sectionIdx: number) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       const section = next.sections[sectionIdx]
       section.chords.push([{ slots: ['-'] }, { slots: ['-'] }, { slots: ['-'] }, { slots: ['-'] }])
@@ -235,7 +251,7 @@ export default function App() {
   }
 
   function onAddSection(afterIdx: number) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       const insertAt = afterIdx < 0 ? 0 : afterIdx + 1
       next.sections.splice(insertAt, 0, { name: 'New Section', chords: [[{ slots: ['-'] }, { slots: ['-'] }, { slots: ['-'] }, { slots: ['-'] }]] })
@@ -245,7 +261,7 @@ export default function App() {
 
   function onSplitRow(sectionIdx: number, rowIdx: number) {
     if (rowIdx === 0) return
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       const sec = next.sections[sectionIdx]
       const newSec = {
@@ -261,7 +277,7 @@ export default function App() {
   }
 
   function onDeleteRow(sectionIdx: number, rowIdx: number) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       const section = next.sections[sectionIdx]
       section.chords.splice(rowIdx, 1)
@@ -273,7 +289,7 @@ export default function App() {
   }
 
   function onClearRhythm(sectionIdx: number, rowIdx: number) {
-    setSong(prev => {
+    updateSong(prev => {
       const next = structuredClone(prev)
       const section = next.sections[sectionIdx]
       if (!section.rhythm) {
@@ -351,6 +367,7 @@ export default function App() {
     setCurrentFile(filename)
     const parsed = normalizeRhythm(parseSong(text))
     setSong(parsed)
+    historyRef.current = []
     autoShowLyricMelody(parsed)
   }
 
@@ -384,7 +401,7 @@ export default function App() {
   saveSongRef.current = saveSong
 
   useEffect(() => {
-    const handler = () => saveSongRef.current()
+    const handler = () => { if (!suppressSaveRef.current) saveSongRef.current() }
     window.addEventListener('blur', handler)
     return () => window.removeEventListener('blur', handler)
   }, [])
@@ -396,6 +413,12 @@ export default function App() {
         saveSongRef.current()
         setSaveMessage('Saved')
         setTimeout(() => setSaveMessage(null), 1500)
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        const el = document.activeElement
+        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return
+        e.preventDefault()
+        undo()
       }
     }
     window.addEventListener('keydown', handler)
@@ -507,6 +530,7 @@ export default function App() {
         <label><input type="checkbox" checked={showLyric} onChange={e => setShowLyric(e.target.checked)} /> Lyric</label>
         <label><input type="checkbox" checked={showMelody} onChange={e => setShowMelody(e.target.checked)} /> Melody</label>
         <label><input type="checkbox" checked={showRhythm} onChange={e => setShowRhythm(e.target.checked)} /> Rhythm</label>
+        <button onClick={undo}>Undo</button>
         <button onClick={openSong}>Open</button>
         <button onClick={saveSong}>Save</button>
         <button onClick={saveAsSong}>Save As</button>
@@ -520,6 +544,7 @@ export default function App() {
           currentFile={currentFile}
           onOpen={(filename, content) => loadFromText(filename, content)}
           onSave={saveSong}
+          onSuppressSave={(suppress) => { suppressSaveRef.current = suppress }}
         />
         <main className="app-main">
           <SongView
@@ -541,8 +566,8 @@ export default function App() {
             onRenameSection={onRenameSection}
             onMergeUp={onMergeUp}
             onMergeDown={onMergeDown}
-            onTitleChange={title => setSong(prev => { const next = structuredClone(prev); next.meta.title = title; return next })}
-            onMetaChange={(field, value) => setSong(prev => {
+            onTitleChange={title => updateSong(prev => { const next = structuredClone(prev); next.meta.title = title; return next })}
+            onMetaChange={(field, value) => updateSong(prev => {
               const next = structuredClone(prev)
               if (field === 'key') next.meta.key = value || undefined
               else if (field === 'originalKey') next.meta.originalKey = value || undefined
