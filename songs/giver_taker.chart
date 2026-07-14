@@ -1,19 +1,19 @@
 title: Giver / Taker - Kacey Musgraves
 originalKey: Eb
-key: Eb
+key: D
 time: 4/4
 tempo: 70
 
 [Intro]
 chord:
-| Eb     | Fm7    | Gm7 - Fm7 |
+| D      | Em7    | F#m7 - Em7 |
 
 [A1 + B1]
 chord:
-| Eb     | Fm7    | Gm7 - Fm7 | Eb     |
-| Eb     | Fm7    | Gm7    | Bb     |
-| Ab     | Eb - Bb | Ab     | Eb - Bb |
-| Ab     | F7     | Ab     |
+| D      | Em7    | F#m7 - Em7 | D      |
+| D      | Em7    | F#m7   | A      |
+| G      | D - A  | G      | D - A  |
+| G      | E7     | G      |
 
 lyric:
 Sundown and I'm lonely in this house; It's feeling one-dimensional to me
@@ -29,15 +29,15 @@ rhythm:
 
 [Inter]
 chord:
-| Eb     | Fm7    | Gm7 - Fm7 |
+| D      | Em7    | F#m7 - Em7 |
 
 [A2 + B2]
 chord:
-| Eb     | Fm7    | Gm7 - Fm7 | Eb     |
-| Eb     | Fm7    | Gm7    | Bb     |
-| Ab     | Eb - Bb | Ab     | Eb - Bb |
-| Ab     | F7     | Ab     |
-| Eb     | Eb     |
+| D      | Em7    | F#m7 - Em7 | D      |
+| D      | Em7    | F#m7   | A      |
+| G      | D - A  | G      | D - A  |
+| G      | E7     | G      |
+| D      | D      |
 
 lyric:
 Sunrise and you're lying next to me; Wrap me in your arms like I'm made of glass
@@ -54,8 +54,8 @@ rhythm:
 
 [Bridge]
 chord:
-| Ab     | Eb Bb Ab | -      | Bb     |
-| Bb     |
+| G      | D A G  | -      | A      |
+| A      |
 
 lyric:
 Don't wanna share, I want it all all of the time; Tell me right now you feel the same and that you're mine
@@ -67,8 +67,8 @@ rhythm:
 
 [B3]
 chord:
-| Ab     | Eb - Bb | Ab     | Eb - Bb |
-| Ab     | F7     | Ab     | -      |
+| G      | D - A  | G      | D - A  |
+| G      | E7     | G      | -      |
 
 lyric:
 give you everything that you wanted; And I would never ask for any of it back
@@ -80,7 +80,7 @@ rhythm:
 
 [Outro]
 chord:
-| Eb     | Fm7    | Gm7 - Fm7 | Eb     |
+| D      | Em7    | F#m7 - Em7 | D      |
 
 lyric:
 Everything you had

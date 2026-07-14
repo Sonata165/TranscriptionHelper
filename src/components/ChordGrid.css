@@ -6,7 +6,7 @@
 .chord-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  margin-bottom: -2px;
+  margin-bottom: 0.15rem;
 }
 
 .chord-row:last-child {
@@ -16,15 +16,15 @@
 .chord-measure {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  border-top: 2px solid #222;
-  border-bottom: 2px solid #222;
-  border-right: 1.5px solid #555;
-  min-height: 2.6rem;
+  border-top: 2px solid #999;
+  border-bottom: 2px solid #999;
+  border-right: 1.5px solid #aaa;
+  min-height: 1.8rem;
   position: relative;
 }
 
 .chord-measure:first-child {
-  border-left: 2px solid #222;
+  border-left: 2px solid #999;
 }
 
 /* Adjacent real measures share the border — collapse it */
@@ -93,7 +93,7 @@
 .chord-slot {
   display: flex;
   align-items: center;
-  padding: 0.2rem 0.15rem;
+  padding: 0.05rem 0.15rem;
   font-family: 'Georgia', serif;
   font-size: 0.92rem;
   font-weight: 600;
