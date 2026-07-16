@@ -150,7 +150,6 @@
   display: flex;
   align-items: flex-start;
   margin-bottom: 0.15rem;
-  position: relative;
 }
 
 .chart-row:last-child {
@@ -164,15 +163,15 @@
 
 /* Delete row gutter — always present to the right, hover reveals button */
 .delete-row-zone {
-  position: absolute;
-  right: -1.5rem;
-  top: 0;
   width: 1.4rem;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.1rem;
   padding-top: 0.4rem;
+  max-height: 1.8rem;
+  overflow: visible;
 }
 
 .delete-row {
