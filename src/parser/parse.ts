@@ -34,7 +34,7 @@ function parseMelodyLine(line: string): string[] {
   return parts.map(part => part.trim())
 }
 
-type BlockType = 'chord' | 'lyric' | 'melody' | 'rhythm' | null
+type BlockType = 'chord' | 'lyric' | 'melody' | 'rhythm' | 'notes' | null
 
 export function parseSong(text: string): Song {
   const lines = text.split('\n')
@@ -75,6 +75,7 @@ export function parseSong(text: string): Song {
     if (line.trim() === 'lyric:')  { currentBlock = 'lyric';  continue }
     if (line.trim() === 'melody:') { currentBlock = 'melody'; continue }
     if (line.trim() === 'rhythm:') { currentBlock = 'rhythm'; continue }
+    if (line.trim() === 'notes:')  { currentBlock = 'notes';  continue }
 
     // Grid lines — each | ... | line becomes one row
     if (line.trim().startsWith('|')) {
@@ -100,6 +101,12 @@ export function parseSong(text: string): Song {
       // Legacy plain-text melody line — put entire text into a single measure
       if (!currentSection.melody) currentSection.melody = []
       currentSection.melody.push([line.trim() === '-' ? '' : line.trim()])
+      continue
+    }
+    if (currentBlock === 'notes') {
+      currentSection.notes = currentSection.notes
+        ? currentSection.notes + '\n' + line
+        : line
       continue
     }
   }

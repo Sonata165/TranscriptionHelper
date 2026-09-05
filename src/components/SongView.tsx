@@ -189,9 +189,12 @@ interface Props {
   onAddRow: (sectionIdx: number) => void
   onAddSection: (afterIdx: number) => void
   onDeleteRow: (sectionIdx: number, rowIdx: number) => void
+  onDuplicateRow: (sectionIdx: number, rowIdx: number) => void
   onSplitRow: (sectionIdx: number, rowIdx: number) => void
   onDeleteSection: (sectionIdx: number) => void
+  onDuplicateSection: (sectionIdx: number) => void
   onRenameSection: (sectionIdx: number, name: string) => void
+  onNotesChange: (sectionIdx: number, value: string) => void
   onMergeUp: (sectionIdx: number) => void
   onMergeDown: (sectionIdx: number) => void
   onTitleChange: (title: string) => void
@@ -226,26 +229,38 @@ function EditableMeta({ label, value, onChange }: { label: string; value: string
   )
 }
 
-function SectionTitle({ name, sectionIdx, isFirst, isLast, onRename, onDelete, onMergeUp, onMergeDown }: {
+function SectionTitle({ name, notes, sectionIdx, isFirst, isLast, onRename, onDelete, onDuplicate, onMergeUp, onMergeDown, onNotesChange }: {
   name: string
+  notes: string
   sectionIdx: number
   isFirst: boolean
   isLast: boolean
   onRename: (sectionIdx: number, name: string) => void
   onDelete: (sectionIdx: number) => void
+  onDuplicate: (sectionIdx: number) => void
   onMergeUp: (sectionIdx: number) => void
   onMergeDown: (sectionIdx: number) => void
+  onNotesChange: (sectionIdx: number, value: string) => void
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const [editingNotes, setEditingNotes] = useState(false)
+  const [notesDraft, setNotesDraft] = useState('')
+  const notesInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (editing) inputRef.current?.select() }, [editing])
+  useEffect(() => { if (editingNotes) notesInputRef.current?.focus() }, [editingNotes])
 
   function commit() {
     setEditing(false)
     const v = draft.trim() || name
     if (v !== name) onRename(sectionIdx, v)
+  }
+
+  function commitNotes() {
+    setEditingNotes(false)
+    if (notesDraft !== notes) onNotesChange(sectionIdx, notesDraft)
   }
 
   return (
@@ -281,6 +296,30 @@ function SectionTitle({ name, sectionIdx, isFirst, isLast, onRename, onDelete, o
       {!isLast && (
         <button type="button" className="delete-section no-print" title="Merge down" onClick={() => onMergeDown(sectionIdx)}>↓</button>
       )}
+      <button type="button" className="delete-section no-print" title="Duplicate section" onClick={() => onDuplicate(sectionIdx)}>⧉</button>
+      {editingNotes ? (
+        <input
+          ref={notesInputRef}
+          className="section-notes-input"
+          value={notesDraft}
+          onChange={e => setNotesDraft(e.target.value)}
+          onBlur={() => {
+            if (notesDraft !== notes) onNotesChange(sectionIdx, notesDraft)
+            if (document.hasFocus()) setEditingNotes(false)
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Enter') { e.preventDefault(); commitNotes() }
+            if (e.key === 'Escape') setEditingNotes(false)
+          }}
+        />
+      ) : (
+        <span
+          className={`section-notes${notes ? '' : ' section-notes-empty'}`}
+          onClick={() => { setNotesDraft(notes); setEditingNotes(true) }}
+        >
+          {notes || '…'}
+        </span>
+      )}
     </div>
   )
 }
@@ -288,8 +327,8 @@ function SectionTitle({ name, sectionIdx, isFirst, isLast, onRename, onDelete, o
 export function SongView({
   song, showLyric = true, showMelody = false, showRhythm = false,
   onChordChange, onRhythmChange, onLyricChange, onMelodyChange,
-  onAddMeasure, onDeleteMeasure, onAddRow, onAddSection, onDeleteRow, onSplitRow,
-  onDeleteSection, onRenameSection, onMergeUp, onMergeDown, onTitleChange, onMetaChange, onTranspose,
+  onAddMeasure, onDeleteMeasure, onAddRow, onAddSection, onDeleteRow, onDuplicateRow, onSplitRow,
+  onDeleteSection, onDuplicateSection, onRenameSection, onNotesChange, onMergeUp, onMergeDown, onTitleChange, onMetaChange, onTranspose,
   onClearRhythm,
 }: Props) {
   const { meta, sections } = song
@@ -387,13 +426,16 @@ export function SongView({
         <section key={sectionIdx} className="song-section">
           <SectionTitle
             name={section.name}
+            notes={section.notes || ''}
             sectionIdx={sectionIdx}
             isFirst={sectionIdx === 0}
             isLast={sectionIdx === sections.length - 1}
             onRename={onRenameSection}
             onDelete={onDeleteSection}
+            onDuplicate={onDuplicateSection}
             onMergeUp={onMergeUp}
             onMergeDown={onMergeDown}
+            onNotesChange={onNotesChange}
           />
           <div className="chord-grid">
             {section.chords.map((rowMeasures, rowIdx) => (
@@ -459,6 +501,12 @@ export function SongView({
                       onClick={() => onSplitRow(sectionIdx, rowIdx)}
                     >÷</button>
                   )}
+                  <button
+                    type="button"
+                    className="delete-row duplicate-row"
+                    title="Duplicate row"
+                    onClick={() => onDuplicateRow(sectionIdx, rowIdx)}
+                  >⧉</button>
                   {showRhythm && (
                     <button
                       type="button"

@@ -27,6 +27,7 @@ export interface Section {
   lyric?: string[]           // one string per row, loosely aligned to chord rows
   melody?: string[][]        // parallel to chords rows; melody[row][measure] = digit string
   rhythm?: RhythmMeasure[][] // parallel to chords rows
+  notes?: string             // free-form rehearsal notes
 }
 
 export interface Song {

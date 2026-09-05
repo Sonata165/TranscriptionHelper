@@ -237,6 +237,14 @@ export default function App() {
     })
   }
 
+  function onNotesChange(sectionIdx: number, value: string) {
+    updateSong(prev => {
+      const next = structuredClone(prev)
+      next.sections[sectionIdx].notes = value || undefined
+      return next
+    })
+  }
+
   function onAddRow(sectionIdx: number) {
     updateSong(prev => {
       const next = structuredClone(prev)
@@ -284,6 +292,36 @@ export default function App() {
       section.rhythm?.splice(rowIdx, 1)
       section.lyric?.splice(rowIdx, 1)
       section.melody?.splice(rowIdx, 1)
+      return next
+    })
+  }
+
+  function onDuplicateRow(sectionIdx: number, rowIdx: number) {
+    updateSong(prev => {
+      const next = structuredClone(prev)
+      const section = next.sections[sectionIdx]
+      const chordsCopy = structuredClone(section.chords[rowIdx])
+      section.chords.splice(rowIdx + 1, 0, chordsCopy)
+      if (section.rhythm?.[rowIdx]) {
+        section.rhythm.splice(rowIdx + 1, 0, structuredClone(section.rhythm[rowIdx]))
+      }
+      if (section.lyric?.[rowIdx] !== undefined) {
+        if (!section.lyric) section.lyric = []
+        section.lyric.splice(rowIdx + 1, 0, section.lyric[rowIdx] ?? '')
+      }
+      if (section.melody?.[rowIdx]) {
+        if (!section.melody) section.melody = []
+        section.melody.splice(rowIdx + 1, 0, structuredClone(section.melody[rowIdx]))
+      }
+      return next
+    })
+  }
+
+  function onDuplicateSection(sectionIdx: number) {
+    updateSong(prev => {
+      const next = structuredClone(prev)
+      const copy = structuredClone(next.sections[sectionIdx])
+      next.sections.splice(sectionIdx + 1, 0, copy)
       return next
     })
   }
@@ -561,9 +599,12 @@ export default function App() {
             onAddRow={onAddRow}
             onAddSection={onAddSection}
             onDeleteRow={onDeleteRow}
+            onDuplicateRow={onDuplicateRow}
             onSplitRow={onSplitRow}
             onDeleteSection={onDeleteSection}
+            onDuplicateSection={onDuplicateSection}
             onRenameSection={onRenameSection}
+            onNotesChange={onNotesChange}
             onMergeUp={onMergeUp}
             onMergeDown={onMergeDown}
             onTitleChange={title => updateSong(prev => { const next = structuredClone(prev); next.meta.title = title; return next })}

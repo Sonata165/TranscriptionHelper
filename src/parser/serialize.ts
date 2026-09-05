@@ -53,6 +53,12 @@ export function serializeSong(song: Song): string {
         lines.push('| ' + row.map(rhythmMeasureToStr).join(' | ') + ' |')
       }
     }
+
+    if (section.notes) {
+      lines.push('')
+      lines.push('notes:')
+      lines.push(section.notes)
+    }
   }
 
   return lines.join('\n') + '\n'
