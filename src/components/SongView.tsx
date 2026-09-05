@@ -202,6 +202,9 @@ interface Props {
   onTranspose: (delta: number) => void
   onClearRhythm: (sectionIdx: number, rowIdx: number) => void
   onMoveSection: (fromIdx: number, toIdx: number) => void
+  onMoveRow: (sectionIdx: number, fromIdx: number, toIdx: number) => void
+  onSectionTranspose: (sectionIdx: number, delta: number) => void
+  onSectionKeyChange: (sectionIdx: number, value: string) => void
 }
 
 function EditableMeta({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
@@ -230,9 +233,10 @@ function EditableMeta({ label, value, onChange }: { label: string; value: string
   )
 }
 
-function SectionTitle({ name, notes, sectionIdx, isFirst, isLast, onRename, onDelete, onDuplicate, onMergeUp, onMergeDown, onNotesChange, onDragStart, onDragEnd }: {
+function SectionTitle({ name, notes, sectionKey, sectionIdx, isFirst, isLast, onRename, onDelete, onDuplicate, onMergeUp, onMergeDown, onNotesChange, onDragStart, onDragEnd, onTranspose, onKeyChange }: {
   name: string
   notes: string
+  sectionKey: string
   sectionIdx: number
   isFirst: boolean
   isLast: boolean
@@ -244,6 +248,8 @@ function SectionTitle({ name, notes, sectionIdx, isFirst, isLast, onRename, onDe
   onNotesChange: (sectionIdx: number, value: string) => void
   onDragStart: () => void
   onDragEnd: () => void
+  onTranspose: (sectionIdx: number, delta: number) => void
+  onKeyChange: (sectionIdx: number, value: string) => void
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -251,9 +257,13 @@ function SectionTitle({ name, notes, sectionIdx, isFirst, isLast, onRename, onDe
   const [editingNotes, setEditingNotes] = useState(false)
   const [notesDraft, setNotesDraft] = useState('')
   const notesInputRef = useRef<HTMLInputElement>(null)
+  const [editingKey, setEditingKey] = useState(false)
+  const [keyDraft, setKeyDraft] = useState('')
+  const keyInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (editing) inputRef.current?.select() }, [editing])
   useEffect(() => { if (editingNotes) notesInputRef.current?.focus() }, [editingNotes])
+  useEffect(() => { if (editingKey) keyInputRef.current?.select() }, [editingKey])
 
   function commit() {
     setEditing(false)
@@ -264,6 +274,11 @@ function SectionTitle({ name, notes, sectionIdx, isFirst, isLast, onRename, onDe
   function commitNotes() {
     setEditingNotes(false)
     if (notesDraft !== notes) onNotesChange(sectionIdx, notesDraft)
+  }
+
+  function commitKey() {
+    setEditingKey(false)
+    if (keyDraft !== sectionKey) onKeyChange(sectionIdx, keyDraft)
   }
 
   return (
@@ -287,6 +302,33 @@ function SectionTitle({ name, notes, sectionIdx, isFirst, isLast, onRename, onDe
       ) : (
         <h2 className="section-name" onClick={() => { setDraft(name); setEditing(true) }}>{name}</h2>
       )}
+      <div className="section-key-group">
+        <button className="transpose-btn section-transpose-btn no-print" onClick={() => onTranspose(sectionIdx, -1)} title="Transpose section down">−</button>
+        {editingKey ? (
+          <input
+            ref={keyInputRef}
+            className="section-key-input"
+            value={keyDraft}
+            onChange={e => setKeyDraft(e.target.value)}
+            onBlur={() => {
+              if (keyDraft !== sectionKey) onKeyChange(sectionIdx, keyDraft)
+              if (document.hasFocus()) setEditingKey(false)
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); commitKey() }
+              if (e.key === 'Escape') setEditingKey(false)
+            }}
+          />
+        ) : (
+          <span
+            className={`section-key${sectionKey ? '' : ' section-key-empty'}`}
+            onClick={() => { setKeyDraft(sectionKey); setEditingKey(true) }}
+          >
+            {sectionKey || '—'}
+          </span>
+        )}
+        <button className="transpose-btn section-transpose-btn no-print" onClick={() => onTranspose(sectionIdx, 1)} title="Transpose section up">+</button>
+      </div>
       <button
         type="button"
         className="delete-section no-print"
@@ -342,13 +384,29 @@ export function SongView({
   onChordChange, onRhythmChange, onLyricChange, onMelodyChange,
   onAddMeasure, onDeleteMeasure, onAddRow, onAddSection, onDeleteRow, onDuplicateRow, onSplitRow,
   onDeleteSection, onDuplicateSection, onRenameSection, onNotesChange, onMergeUp, onMergeDown, onTitleChange, onMetaChange, onTranspose,
-  onClearRhythm, onMoveSection,
+  onClearRhythm, onMoveSection, onMoveRow, onSectionTranspose, onSectionKeyChange,
 }: Props) {
   const { meta, sections } = song
   const [pendingFocusRow, setPendingFocusRow] = useState<{si: number, ri: number, last?: boolean} | null>(null)
   const [pendingMelodyFocus, setPendingMelodyFocus] = useState<{si: number, ri: number, last?: boolean} | null>(null)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dropIdx, setDropIdx] = useState<number | null>(null)
+  const [rowDrag, setRowDrag] = useState<{si: number, ri: number} | null>(null)
+  const [rowDropIdx, setRowDropIdx] = useState<number | null>(null)
+  const [plainView, setPlainView] = useState(false)
+
+  useEffect(() => {
+    if (!plainView) return
+    function handler(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      const amount = window.innerHeight * 0.85
+      if (e.key === 'ArrowRight') { e.preventDefault(); window.scrollBy({ top: amount, behavior: 'smooth' }) }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); window.scrollBy({ top: -amount, behavior: 'smooth' }) }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [plainView])
+
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -397,8 +455,66 @@ export function SongView({
     }
   }
 
+  function renderPlainView() {
+    const elements: React.ReactNode[] = []
+    let key = 0
+    function addLine(node: React.ReactNode, className?: string) { elements.push(<div key={key++} className={className}>{node}</div>) }
+    function addBlank() { elements.push(<div key={key++}>&nbsp;</div>) }
+
+    addLine(<b>{meta.title}</b>)
+    if (meta.key) addLine(`Key: ${meta.key}`)
+    if (meta.tempo) addLine(`Tempo: ${meta.tempo}`)
+    addBlank()
+    for (const section of sections) {
+      const label = section.key ? `[${section.name}] (${section.key})` : `[${section.name}]`
+      addLine(<b>{label}</b>)
+      for (let rowIdx = 0; rowIdx < section.chords.length; rowIdx++) {
+        const row = section.chords[rowIdx]
+        const measures = row.map(m => {
+          const tokens = m.slots.length > 0 ? m.slots : ['-']
+          return tokens.join(' ').padEnd(6)
+        })
+        const chordParts: React.ReactNode[] = []
+        chordParts.push('| ')
+        measures.forEach((m, i) => {
+          if (i > 0) chordParts.push(' | ')
+          chordParts.push(<b key={i}>{m}</b>)
+        })
+        chordParts.push(' |')
+        const lyric = showLyric ? (section.lyric?.[rowIdx] || '') : ''
+        const melodyRow = showMelody ? section.melody?.[rowIdx] : undefined
+        const melodyStr = melodyRow?.filter(m => m).join(' ') ?? ''
+        const sideText = lyric || melodyStr
+        const sideClass = lyric ? 'plain-lyric-col' : 'plain-melody-col'
+        if (sideText) {
+          addLine(
+            <>
+              <span className="plain-chord-col">{chordParts}</span>
+              <span className={sideClass}>{sideText}</span>
+            </>,
+            'plain-chord-lyric-row'
+          )
+        } else {
+          addLine(<>{chordParts}</>)
+        }
+      }
+      addBlank()
+    }
+    return elements
+  }
+
   return (
     <div className="song-view">
+      <div className="switch-view-bar no-print">
+        {plainView && <span className="view-hint">← → to scroll</span>}
+        <button
+          className="switch-view-btn"
+          onClick={() => setPlainView(v => !v)}
+        >{plainView ? 'Edit View' : 'Plain View'}</button>
+      </div>
+      {plainView ? (
+        <div className="plain-view">{renderPlainView()}</div>
+      ) : (<>
       <header className="song-header">
         {editingTitle ? (
           <input
@@ -456,6 +572,7 @@ export function SongView({
           <SectionTitle
             name={section.name}
             notes={section.notes || ''}
+            sectionKey={section.key || ''}
             sectionIdx={sectionIdx}
             isFirst={sectionIdx === 0}
             isLast={sectionIdx === sections.length - 1}
@@ -467,10 +584,36 @@ export function SongView({
             onNotesChange={onNotesChange}
             onDragStart={() => setDragIdx(sectionIdx)}
             onDragEnd={() => { setDragIdx(null); setDropIdx(null) }}
+            onTranspose={onSectionTranspose}
+            onKeyChange={onSectionKeyChange}
           />
           <div className="chord-grid">
             {section.chords.map((rowMeasures, rowIdx) => (
-              <div key={rowIdx} className="chart-row">
+              <div
+                key={rowIdx}
+                className={`chart-row${rowDrag?.si === sectionIdx && rowDropIdx === rowIdx && rowDrag.ri !== rowIdx ? ' row-drop-target' : ''}`}
+                onDragOver={e => {
+                  if (!rowDrag || rowDrag.si !== sectionIdx) return
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setRowDropIdx(rowIdx)
+                }}
+                onDragLeave={e => {
+                  if (!rowDrag) return
+                  e.stopPropagation()
+                  if (rowDropIdx === rowIdx) setRowDropIdx(null)
+                }}
+                onDrop={e => {
+                  if (!rowDrag) return
+                  e.preventDefault()
+                  e.stopPropagation()
+                  if (rowDrag.si === sectionIdx && rowDrag.ri !== rowIdx) {
+                    onMoveRow(sectionIdx, rowDrag.ri, rowIdx)
+                  }
+                  setRowDrag(null)
+                  setRowDropIdx(null)
+                }}
+              >
                 <div className="chart-row-content">
                   <ChordRow
                     measures={rowMeasures}
@@ -538,6 +681,17 @@ export function SongView({
                     title="Duplicate row"
                     onClick={() => onDuplicateRow(sectionIdx, rowIdx)}
                   >⧉</button>
+                  <span
+                    className="row-drag-handle"
+                    title="Drag to reorder"
+                    draggable
+                    onDragStart={e => {
+                      e.stopPropagation()
+                      e.dataTransfer.effectAllowed = 'move'
+                      setRowDrag({ si: sectionIdx, ri: rowIdx })
+                    }}
+                    onDragEnd={() => { setRowDrag(null); setRowDropIdx(null) }}
+                  >⠿</span>
                   {showRhythm && (
                     <button
                       type="button"
@@ -560,6 +714,7 @@ export function SongView({
           </div>
         </section>
       ))}
+    </>)}
     </div>
   )
 }

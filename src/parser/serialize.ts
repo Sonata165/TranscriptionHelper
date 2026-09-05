@@ -27,6 +27,7 @@ export function serializeSong(song: Song): string {
   for (const section of sections) {
     lines.push('')
     lines.push(`[${section.name}]`)
+    if (section.key) lines.push(`key: ${section.key}`)
     lines.push('chord:')
     for (const row of section.chords) {
       lines.push('| ' + row.map(chordMeasureToStr).join(' | ') + ' |')

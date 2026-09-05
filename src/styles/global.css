@@ -31,8 +31,9 @@ body {
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding: 0.6rem 1.5rem;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  flex-wrap: nowrap;
   background: #222;
   color: #eee;
   font-family: sans-serif;
@@ -57,12 +58,13 @@ body {
 }
 
 .toolbar button {
-  padding: 0.3rem 0.9rem;
+  padding: 0.2rem 0.5rem;
   background: #444;
   color: #fff;
   border: 1px solid #666;
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -71,7 +73,6 @@ body {
 }
 
 .toolbar button:last-child {
-  margin-left: auto;
 }
 
 .btn-reset {

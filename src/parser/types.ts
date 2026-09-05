@@ -23,6 +23,7 @@ export interface RhythmMeasure {
 
 export interface Section {
   name: string
+  key?: string               // section-level display key (overrides song key for this section)
   chords: ChordMeasure[][]   // each sub-array is one row as written in the file
   lyric?: string[]           // one string per row, loosely aligned to chord rows
   melody?: string[][]        // parallel to chords rows; melody[row][measure] = digit string

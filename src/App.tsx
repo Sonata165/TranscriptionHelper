@@ -203,12 +203,38 @@ export default function App() {
       const newKey = next.meta.key ? transposeKey(next.meta.key, delta) : ''
       next.meta.key = newKey
       for (const section of next.sections) {
+        if (section.key) section.key = transposeKey(section.key, delta)
+        const sectionKey = section.key || newKey
         for (const row of section.chords) {
           for (const measure of row) {
-            measure.slots = measure.slots.map(slot => transposeChord(slot, delta, newKey))
+            measure.slots = measure.slots.map(slot => transposeChord(slot, delta, sectionKey))
           }
         }
       }
+      return next
+    })
+  }
+
+  function onSectionTranspose(sectionIdx: number, delta: number) {
+    updateSong(prev => {
+      const next = structuredClone(prev)
+      const section = next.sections[sectionIdx]
+      const currentKey = section.key || next.meta.key || ''
+      const newKey = currentKey ? transposeKey(currentKey, delta) : ''
+      section.key = newKey || undefined
+      for (const row of section.chords) {
+        for (const measure of row) {
+          measure.slots = measure.slots.map(slot => transposeChord(slot, delta, newKey))
+        }
+      }
+      return next
+    })
+  }
+
+  function onSectionKeyChange(sectionIdx: number, value: string) {
+    updateSong(prev => {
+      const next = structuredClone(prev)
+      next.sections[sectionIdx].key = value || undefined
       return next
     })
   }
@@ -335,6 +361,20 @@ export default function App() {
       const next = structuredClone(prev)
       const [moved] = next.sections.splice(fromIdx, 1)
       next.sections.splice(toIdx, 0, moved)
+      return next
+    })
+  }
+
+  function onMoveRow(sectionIdx: number, fromIdx: number, toIdx: number) {
+    if (fromIdx === toIdx) return
+    updateSong(prev => {
+      const next = structuredClone(prev)
+      const sec = next.sections[sectionIdx]
+      const [movedChord] = sec.chords.splice(fromIdx, 1)
+      sec.chords.splice(toIdx, 0, movedChord)
+      if (sec.rhythm) { const [r] = sec.rhythm.splice(fromIdx, 1); sec.rhythm.splice(toIdx, 0, r) }
+      if (sec.lyric) { const [l] = sec.lyric.splice(fromIdx, 1); sec.lyric.splice(toIdx, 0, l) }
+      if (sec.melody) { const [m] = sec.melody.splice(fromIdx, 1); sec.melody.splice(toIdx, 0, m) }
       return next
     })
   }
@@ -537,6 +577,41 @@ export default function App() {
     } catch { /* cancelled */ }
   }
 
+  async function exportChordsAndLyrics() {
+    const lines: string[] = []
+    lines.push(song.meta.title)
+    if (song.meta.key) lines.push(`Key: ${song.meta.key}`)
+    if (song.meta.tempo) lines.push(`Tempo: ${song.meta.tempo}`)
+    lines.push('')
+    for (const section of song.sections) {
+      lines.push(`[${section.name}]`)
+      for (let rowIdx = 0; rowIdx < section.chords.length; rowIdx++) {
+        const row = section.chords[rowIdx]
+        const measures = row.map(m => {
+          const tokens = m.slots.length > 0 ? m.slots : ['-']
+          return tokens.join(' ').padEnd(6)
+        })
+        lines.push('| ' + measures.join(' | ') + ' |')
+        const lyric = section.lyric?.[rowIdx]
+        if (lyric) lines.push(lyric)
+      }
+      lines.push('')
+    }
+    const text = lines.join('\n')
+    const filename = song.meta.title.toLowerCase().replace(/\s+/g, '-') + '-chords-lyrics.txt'
+    if (!('showSaveFilePicker' in window)) { downloadFallback(text, filename); return }
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: filename,
+        startIn: dirHandleRef.current ?? 'documents',
+        types: [{ description: 'Text file', accept: { 'text/plain': ['.txt'] } }],
+      })
+      const writable = await handle.createWritable()
+      await writable.write(text)
+      await writable.close()
+    } catch { /* cancelled */ }
+  }
+
   async function exportChordsAndMelody() {
     const lines: string[] = []
     lines.push(song.meta.title)
@@ -574,6 +649,53 @@ export default function App() {
     } catch { /* cancelled */ }
   }
 
+  function generateLeadSheet(): string {
+    const lines: string[] = []
+    lines.push(song.meta.title)
+    if (song.meta.key) lines.push(`Key: ${song.meta.key}`)
+    if (song.meta.tempo) lines.push(`Tempo: ${song.meta.tempo}`)
+    lines.push('')
+    for (const section of song.sections) {
+      const label = section.key ? `[${section.name}] (${section.key})` : `[${section.name}]`
+      lines.push(label)
+      for (let rowIdx = 0; rowIdx < section.chords.length; rowIdx++) {
+        const row = section.chords[rowIdx]
+        const measures = row.map(m => {
+          const tokens = m.slots.length > 0 ? m.slots : ['-']
+          return tokens.join(' ').padEnd(6)
+        })
+        let line = '| ' + measures.join(' | ') + ' |'
+        const lyric = showLyric ? (section.lyric?.[rowIdx] || '') : ''
+        const melodyRow = showMelody ? section.melody?.[rowIdx] : undefined
+        const melodyStr = melodyRow?.filter(m => m).join(' ') ?? ''
+        const sideText = lyric || melodyStr
+        if (sideText) {
+          const pad = Math.max(0, 40 - line.length)
+          line += ' '.repeat(pad + 4) + sideText
+        }
+        lines.push(line)
+      }
+      lines.push('')
+    }
+    return lines.join('\n')
+  }
+
+  async function exportLeadSheet() {
+    const text = generateLeadSheet()
+    const filename = song.meta.title.toLowerCase().replace(/\s+/g, '-') + '-lead-sheet.txt'
+    if (!('showSaveFilePicker' in window)) { downloadFallback(text, filename); return }
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: filename,
+        startIn: dirHandleRef.current ?? 'documents',
+        types: [{ description: 'Text file', accept: { 'text/plain': ['.txt'] } }],
+      })
+      const writable = await handle.createWritable()
+      await writable.write(text)
+      await writable.close()
+    } catch { /* cancelled */ }
+  }
+
   return (
     <div className="app">
       {saveMessage && <div className="save-toast">{saveMessage}</div>}
@@ -588,7 +710,9 @@ export default function App() {
         <button onClick={refreshSong}>Refresh</button>
         <button onClick={() => window.print()}>Print / PDF</button>
         <button onClick={exportChords}>Export Chord</button>
+        <button onClick={exportChordsAndLyrics}>Export Chord + Lyrics</button>
         <button onClick={exportChordsAndMelody}>Export Chord + Melody</button>
+        <button onClick={exportLeadSheet}>Export Lead Sheet</button>
       </nav>
       <div className="app-body">
         <FileSidebar
@@ -632,6 +756,9 @@ export default function App() {
             onTranspose={onTranspose}
             onClearRhythm={onClearRhythm}
             onMoveSection={onMoveSection}
+            onMoveRow={onMoveRow}
+            onSectionTranspose={onSectionTranspose}
+            onSectionKeyChange={onSectionKeyChange}
           />
         </main>
       </div>

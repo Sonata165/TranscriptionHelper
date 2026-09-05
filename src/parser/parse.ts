@@ -70,6 +70,13 @@ export function parseSong(text: string): Song {
 
     if (!currentSection) continue
 
+    // Section-level key
+    const keyMatch = line.trim().match(/^key:\s*(.+)$/i)
+    if (keyMatch && currentBlock === null) {
+      currentSection.key = keyMatch[1].trim()
+      continue
+    }
+
     // Block type declarations
     if (line.trim() === 'chord:')  { currentBlock = 'chord';  continue }
     if (line.trim() === 'lyric:')  { currentBlock = 'lyric';  continue }
