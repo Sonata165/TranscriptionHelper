@@ -157,22 +157,11 @@ export default function App() {
     })
   }
 
-  function normalizeKey(key: string): string {
-    const PREFER_FLAT: Record<string, string> = {
-      'D#': 'Eb',
-      'G#': 'Ab',
-      'A#': 'Bb'
-    }
-    return PREFER_FLAT[key] || key
-  }
-
   function getKeyAccidental(key: string): 'sharp' | 'flat' {
     if (!key) return 'sharp'
     const normalized = key.replace(/♯/g, '#').replace(/♭/g, 'b')
-    // Check for flat/sharp accidentals first (most specific)
     if (normalized.includes('b')) return 'flat'
     if (normalized.includes('#')) return 'sharp'
-    // No accidental — check root note's typical preference
     const root = normalized[0]
     const sharpRoots = ['C', 'G', 'D', 'A', 'E', 'B']
     return sharpRoots.includes(root) ? 'sharp' : 'flat'
@@ -192,13 +181,26 @@ export default function App() {
     return NOTES[note] + quality
   }
 
+  function transposeKey(key: string, delta: number): string {
+    const SEMITONES: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
+    const NOTES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    const NOTES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+    const NOTES = delta > 0 ? NOTES_SHARP : NOTES_FLAT
+    const match = key.match(/^([A-G])(#|b)?/)
+    if (!match) return key
+    const root = match[1], acc = match[2] || '', quality = key.slice(match[0].length)
+    let note = SEMITONES[root] + (acc === '#' ? 1 : acc === 'b' ? -1 : 0)
+    note = (note + delta + 120) % 12
+    return NOTES[note] + quality
+  }
+
   function onTranspose(delta: number) {
     updateSong(prev => {
       const next = structuredClone(prev)
       if (!next.meta.originalKey && next.meta.key) {
         next.meta.originalKey = next.meta.key
       }
-      const newKey = next.meta.key ? normalizeKey(transposeChord(next.meta.key, delta, '')) : ''
+      const newKey = next.meta.key ? transposeKey(next.meta.key, delta) : ''
       next.meta.key = newKey
       for (const section of next.sections) {
         for (const row of section.chords) {
@@ -321,7 +323,18 @@ export default function App() {
     updateSong(prev => {
       const next = structuredClone(prev)
       const copy = structuredClone(next.sections[sectionIdx])
+      copy.name = copy.name + ' Copy'
       next.sections.splice(sectionIdx + 1, 0, copy)
+      return next
+    })
+  }
+
+  function onMoveSection(fromIdx: number, toIdx: number) {
+    if (fromIdx === toIdx) return
+    updateSong(prev => {
+      const next = structuredClone(prev)
+      const [moved] = next.sections.splice(fromIdx, 1)
+      next.sections.splice(toIdx, 0, moved)
       return next
     })
   }
@@ -618,6 +631,7 @@ export default function App() {
             })}
             onTranspose={onTranspose}
             onClearRhythm={onClearRhythm}
+            onMoveSection={onMoveSection}
           />
         </main>
       </div>

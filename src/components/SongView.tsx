@@ -201,6 +201,7 @@ interface Props {
   onMetaChange: (field: 'key' | 'originalKey' | 'time' | 'tempo', value: string) => void
   onTranspose: (delta: number) => void
   onClearRhythm: (sectionIdx: number, rowIdx: number) => void
+  onMoveSection: (fromIdx: number, toIdx: number) => void
 }
 
 function EditableMeta({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
@@ -229,7 +230,7 @@ function EditableMeta({ label, value, onChange }: { label: string; value: string
   )
 }
 
-function SectionTitle({ name, notes, sectionIdx, isFirst, isLast, onRename, onDelete, onDuplicate, onMergeUp, onMergeDown, onNotesChange }: {
+function SectionTitle({ name, notes, sectionIdx, isFirst, isLast, onRename, onDelete, onDuplicate, onMergeUp, onMergeDown, onNotesChange, onDragStart, onDragEnd }: {
   name: string
   notes: string
   sectionIdx: number
@@ -241,6 +242,8 @@ function SectionTitle({ name, notes, sectionIdx, isFirst, isLast, onRename, onDe
   onMergeUp: (sectionIdx: number) => void
   onMergeDown: (sectionIdx: number) => void
   onNotesChange: (sectionIdx: number, value: string) => void
+  onDragStart: () => void
+  onDragEnd: () => void
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -297,6 +300,16 @@ function SectionTitle({ name, notes, sectionIdx, isFirst, isLast, onRename, onDe
         <button type="button" className="delete-section no-print" title="Merge down" onClick={() => onMergeDown(sectionIdx)}>↓</button>
       )}
       <button type="button" className="delete-section no-print" title="Duplicate section" onClick={() => onDuplicate(sectionIdx)}>⧉</button>
+      <span
+        className="section-drag-handle no-print"
+        title="Drag to reorder"
+        draggable
+        onDragStart={e => {
+          e.dataTransfer.effectAllowed = 'move'
+          onDragStart()
+        }}
+        onDragEnd={onDragEnd}
+      >⠿</span>
       {editingNotes ? (
         <input
           ref={notesInputRef}
@@ -329,11 +342,13 @@ export function SongView({
   onChordChange, onRhythmChange, onLyricChange, onMelodyChange,
   onAddMeasure, onDeleteMeasure, onAddRow, onAddSection, onDeleteRow, onDuplicateRow, onSplitRow,
   onDeleteSection, onDuplicateSection, onRenameSection, onNotesChange, onMergeUp, onMergeDown, onTitleChange, onMetaChange, onTranspose,
-  onClearRhythm,
+  onClearRhythm, onMoveSection,
 }: Props) {
   const { meta, sections } = song
   const [pendingFocusRow, setPendingFocusRow] = useState<{si: number, ri: number, last?: boolean} | null>(null)
   const [pendingMelodyFocus, setPendingMelodyFocus] = useState<{si: number, ri: number, last?: boolean} | null>(null)
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [dropIdx, setDropIdx] = useState<number | null>(null)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -411,7 +426,6 @@ export function SongView({
             <EditableMeta label="Display Key" value={meta.key || ''} onChange={v => onMetaChange('key', v)} />
             <button className="transpose-btn" onClick={() => onTranspose(1)} title="Transpose up">+</button>
           </div>
-          <EditableMeta label="Time Signature" value={meta.time || ''} onChange={v => onMetaChange('time', v)} />
           <EditableMeta label="Tempo" value={String(meta.tempo || '')} onChange={v => onMetaChange('tempo', v)} />
         </div>
       </header>
@@ -423,7 +437,22 @@ export function SongView({
       </div>
 
       {sections.map((section, sectionIdx) => (
-        <section key={sectionIdx} className="song-section">
+        <section
+          key={sectionIdx}
+          className={`song-section${dropIdx === sectionIdx && dragIdx !== null && dragIdx !== sectionIdx ? ' section-drop-target' : ''}`}
+          onDragOver={e => {
+            if (dragIdx === null) return
+            e.preventDefault()
+            setDropIdx(sectionIdx)
+          }}
+          onDragLeave={() => { if (dropIdx === sectionIdx) setDropIdx(null) }}
+          onDrop={e => {
+            e.preventDefault()
+            if (dragIdx !== null && dragIdx !== sectionIdx) onMoveSection(dragIdx, sectionIdx)
+            setDragIdx(null)
+            setDropIdx(null)
+          }}
+        >
           <SectionTitle
             name={section.name}
             notes={section.notes || ''}
@@ -436,6 +465,8 @@ export function SongView({
             onMergeUp={onMergeUp}
             onMergeDown={onMergeDown}
             onNotesChange={onNotesChange}
+            onDragStart={() => setDragIdx(sectionIdx)}
+            onDragEnd={() => { setDragIdx(null); setDropIdx(null) }}
           />
           <div className="chord-grid">
             {section.chords.map((rowMeasures, rowIdx) => (

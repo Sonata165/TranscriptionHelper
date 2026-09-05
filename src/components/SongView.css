@@ -145,6 +145,30 @@
   color: #c0392b;
 }
 
+.section-drag-handle {
+  opacity: 0;
+  font-size: 0.85rem;
+  color: #bbb;
+  cursor: grab;
+  padding: 0 0.1rem;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.section-drag-handle:active {
+  cursor: grabbing;
+}
+
+.section-title-row:hover .section-drag-handle {
+  opacity: 1;
+}
+
+.section-drop-target {
+  outline: 2px dashed #6ea8fe;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .section-notes {
   flex: 1;
   font-size: 0.82rem;
