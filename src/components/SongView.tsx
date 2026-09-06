@@ -510,7 +510,7 @@ export function SongView({
         <button
           className="switch-view-btn"
           onClick={() => setPlainView(v => !v)}
-        >{plainView ? 'Edit View' : 'Plain View'}</button>
+        >{plainView ? 'Edit View' : 'Compact View'}</button>
       </div>
       {plainView ? (
         <div className="plain-view">{renderPlainView()}</div>

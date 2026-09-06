@@ -717,6 +717,7 @@ export default function App() {
       <div className="app-body">
         <FileSidebar
           currentFile={currentFile}
+          currentTitle={song.meta.title}
           onOpen={(filename, content) => loadFromText(filename, content)}
           onSave={saveSong}
           onSuppressSave={(suppress) => { suppressSaveRef.current = suppress }}

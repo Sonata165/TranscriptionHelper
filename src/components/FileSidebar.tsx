@@ -3,6 +3,7 @@ import './FileSidebar.css'
 
 interface Props {
   currentFile: string
+  currentTitle?: string
   onOpen: (filename: string, content: string) => void
   onSave?: () => void | Promise<void>
   onSuppressSave?: (suppress: boolean) => void
@@ -18,7 +19,7 @@ function makeTemplate(title: string): string {
   return `title: ${title.trim()}\n\n[Intro]\nchord:\n| - | - | - | - |\n`
 }
 
-export function FileSidebar({ currentFile, onOpen, onSave, onSuppressSave }: Props) {
+export function FileSidebar({ currentFile, currentTitle, onOpen, onSave, onSuppressSave }: Props) {
   const [files, setFiles] = useState<SongEntry[]>([])
   const [loading, setLoading] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -39,6 +40,11 @@ export function FileSidebar({ currentFile, onOpen, onSave, onSuppressSave }: Pro
 
   useEffect(() => { fetchList() }, [])
   useEffect(() => { if (creating) inputRef.current?.focus() }, [creating])
+
+  useEffect(() => {
+    if (!currentTitle) return
+    setFiles(prev => prev.map(f => f.filename === currentFile ? { ...f, title: currentTitle } : f))
+  }, [currentTitle, currentFile])
 
   async function handleClick(filename: string) {
     if (filename === currentFile) return
