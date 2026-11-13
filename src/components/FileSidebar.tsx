@@ -5,6 +5,7 @@ interface Props {
   currentFile: string
   currentTitle?: string
   onOpen: (filename: string, content: string) => void
+  onNew?: (filename: string, content: string) => void
   onSave?: () => void | Promise<void>
   onSuppressSave?: (suppress: boolean) => void
 }
@@ -19,7 +20,7 @@ function makeTemplate(title: string): string {
   return `title: ${title.trim()}\n\n[Intro]\nchord:\n| - | - | - | - |\n`
 }
 
-export function FileSidebar({ currentFile, currentTitle, onOpen, onSave, onSuppressSave }: Props) {
+export function FileSidebar({ currentFile, currentTitle, onOpen, onNew, onSave, onSuppressSave }: Props) {
   const [files, setFiles] = useState<SongEntry[]>([])
   const [loading, setLoading] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -31,6 +32,7 @@ export function FileSidebar({ currentFile, currentTitle, onOpen, onSave, onSuppr
       const res = await fetch('/api/songs')
       if (res.ok) {
         const list: SongEntry[] = await res.json()
+        list.sort((a, b) => a.title.localeCompare(b.title, 'zh-CN'))
         setFiles(list)
         return list
       }
@@ -107,7 +109,7 @@ export function FileSidebar({ currentFile, currentTitle, onOpen, onSave, onSuppr
       })
       if (res.ok) {
         await fetchList()
-        onOpen(filename, content)
+        ;(onNew || onOpen)(filename, content)
       }
     } catch { /* server unavailable */ }
     setCreating(false)

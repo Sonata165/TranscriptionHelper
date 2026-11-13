@@ -22,6 +22,7 @@ export function serializeSong(song: Song): string {
   if (meta.originalKey) lines.push(`originalKey: ${meta.originalKey}`)
   if (meta.key)   lines.push(`key: ${meta.key}`)
   if (meta.time)  lines.push(`time: ${meta.time}`)
+  if (meta.capo)  lines.push(`capo: ${meta.capo}`)
   if (meta.tempo) lines.push(`tempo: ${meta.tempo}`)
 
   for (const section of sections) {

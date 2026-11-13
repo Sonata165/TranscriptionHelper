@@ -198,13 +198,14 @@ interface Props {
   onMergeUp: (sectionIdx: number) => void
   onMergeDown: (sectionIdx: number) => void
   onTitleChange: (title: string) => void
-  onMetaChange: (field: 'key' | 'originalKey' | 'time' | 'tempo', value: string) => void
+  onMetaChange: (field: 'key' | 'originalKey' | 'time' | 'capo' | 'tempo', value: string) => void
   onTranspose: (delta: number) => void
   onClearRhythm: (sectionIdx: number, rowIdx: number) => void
   onMoveSection: (fromIdx: number, toIdx: number) => void
-  onMoveRow: (sectionIdx: number, fromIdx: number, toIdx: number) => void
+  onMoveRow: (fromSec: number, fromIdx: number, toSec: number, toIdx: number) => void
   onSectionTranspose: (sectionIdx: number, delta: number) => void
   onSectionKeyChange: (sectionIdx: number, value: string) => void
+  compactView?: boolean
 }
 
 function EditableMeta({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
@@ -384,7 +385,7 @@ export function SongView({
   onChordChange, onRhythmChange, onLyricChange, onMelodyChange,
   onAddMeasure, onDeleteMeasure, onAddRow, onAddSection, onDeleteRow, onDuplicateRow, onSplitRow,
   onDeleteSection, onDuplicateSection, onRenameSection, onNotesChange, onMergeUp, onMergeDown, onTitleChange, onMetaChange, onTranspose,
-  onClearRhythm, onMoveSection, onMoveRow, onSectionTranspose, onSectionKeyChange,
+  onClearRhythm, onMoveSection, onMoveRow, onSectionTranspose, onSectionKeyChange, compactView: compactViewProp,
 }: Props) {
   const { meta, sections } = song
   const [pendingFocusRow, setPendingFocusRow] = useState<{si: number, ri: number, last?: boolean} | null>(null)
@@ -392,8 +393,12 @@ export function SongView({
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dropIdx, setDropIdx] = useState<number | null>(null)
   const [rowDrag, setRowDrag] = useState<{si: number, ri: number} | null>(null)
-  const [rowDropIdx, setRowDropIdx] = useState<number | null>(null)
+  const [rowDrop, setRowDrop] = useState<{si: number, ri: number} | null>(null)
   const [plainView, setPlainView] = useState(false)
+
+  useEffect(() => {
+    if (compactViewProp !== undefined) setPlainView(compactViewProp)
+  }, [compactViewProp])
 
   useEffect(() => {
     if (!plainView) return
@@ -467,13 +472,16 @@ export function SongView({
     addBlank()
     for (const section of sections) {
       const label = section.key ? `[${section.name}] (${section.key})` : `[${section.name}]`
-      addLine(<b>{label}</b>)
+      addLine(<>
+        <b>{label}</b>
+        {section.notes && <span className="plain-section-notes">  {section.notes}</span>}
+      </>)
+      // Pad each measure column to the widest measure in the section so bar lines align
+      const cells = section.chords.map(row => row.map(m => (m.slots.length > 0 ? m.slots : ['-']).join(' ')))
+      const widths: number[] = []
+      for (const row of cells) row.forEach((c, j) => { widths[j] = Math.max(widths[j] ?? 6, c.length) })
       for (let rowIdx = 0; rowIdx < section.chords.length; rowIdx++) {
-        const row = section.chords[rowIdx]
-        const measures = row.map(m => {
-          const tokens = m.slots.length > 0 ? m.slots : ['-']
-          return tokens.join(' ').padEnd(6)
-        })
+        const measures = cells[rowIdx].map((c, j) => c.padEnd(widths[j]))
         const chordParts: React.ReactNode[] = []
         chordParts.push('| ')
         measures.forEach((m, i) => {
@@ -542,6 +550,7 @@ export function SongView({
             <EditableMeta label="Display Key" value={meta.key || ''} onChange={v => onMetaChange('key', v)} />
             <button className="transpose-btn" onClick={() => onTranspose(1)} title="Transpose up">+</button>
           </div>
+          <EditableMeta label="Capo" value={String(meta.capo || 0)} onChange={v => onMetaChange('capo', v)} />
           <EditableMeta label="Tempo" value={String(meta.tempo || '')} onChange={v => onMetaChange('tempo', v)} />
         </div>
       </header>
@@ -555,8 +564,14 @@ export function SongView({
       {sections.map((section, sectionIdx) => (
         <section
           key={sectionIdx}
-          className={`song-section${dropIdx === sectionIdx && dragIdx !== null && dragIdx !== sectionIdx ? ' section-drop-target' : ''}`}
+          className={`song-section${(dropIdx === sectionIdx && dragIdx !== null && dragIdx !== sectionIdx) || (rowDrag && rowDrop?.si === sectionIdx && rowDrop.ri === section.chords.length) ? ' section-drop-target' : ''}`}
           onDragOver={e => {
+            if (rowDrag) {
+              // Dropping on section area outside any row: append to end of section
+              e.preventDefault()
+              if (rowDrop?.si !== sectionIdx || rowDrop.ri !== section.chords.length) setRowDrop({ si: sectionIdx, ri: section.chords.length })
+              return
+            }
             if (dragIdx === null) return
             e.preventDefault()
             setDropIdx(sectionIdx)
@@ -564,6 +579,13 @@ export function SongView({
           onDragLeave={() => { if (dropIdx === sectionIdx) setDropIdx(null) }}
           onDrop={e => {
             e.preventDefault()
+            if (rowDrag) {
+              const toIdx = rowDrag.si === sectionIdx ? section.chords.length - 1 : section.chords.length
+              onMoveRow(rowDrag.si, rowDrag.ri, sectionIdx, toIdx)
+              setRowDrag(null)
+              setRowDrop(null)
+              return
+            }
             if (dragIdx !== null && dragIdx !== sectionIdx) onMoveSection(dragIdx, sectionIdx)
             setDragIdx(null)
             setDropIdx(null)
@@ -591,27 +613,26 @@ export function SongView({
             {section.chords.map((rowMeasures, rowIdx) => (
               <div
                 key={rowIdx}
-                className={`chart-row${rowDrag?.si === sectionIdx && rowDropIdx === rowIdx && rowDrag.ri !== rowIdx ? ' row-drop-target' : ''}`}
+                className={`chart-row${rowDrag && rowDrop?.si === sectionIdx && rowDrop.ri === rowIdx && !(rowDrag.si === sectionIdx && rowDrag.ri === rowIdx) ? ' row-drop-target' : ''}`}
                 onDragOver={e => {
-                  if (!rowDrag || rowDrag.si !== sectionIdx) return
+                  if (!rowDrag) return
                   e.preventDefault()
                   e.stopPropagation()
-                  setRowDropIdx(rowIdx)
+                  if (rowDrop?.si !== sectionIdx || rowDrop.ri !== rowIdx) setRowDrop({ si: sectionIdx, ri: rowIdx })
                 }}
                 onDragLeave={e => {
                   if (!rowDrag) return
                   e.stopPropagation()
-                  if (rowDropIdx === rowIdx) setRowDropIdx(null)
                 }}
                 onDrop={e => {
                   if (!rowDrag) return
                   e.preventDefault()
                   e.stopPropagation()
-                  if (rowDrag.si === sectionIdx && rowDrag.ri !== rowIdx) {
-                    onMoveRow(sectionIdx, rowDrag.ri, rowIdx)
+                  if (!(rowDrag.si === sectionIdx && rowDrag.ri === rowIdx)) {
+                    onMoveRow(rowDrag.si, rowDrag.ri, sectionIdx, rowIdx)
                   }
                   setRowDrag(null)
-                  setRowDropIdx(null)
+                  setRowDrop(null)
                 }}
               >
                 <div className="chart-row-content">
@@ -690,7 +711,7 @@ export function SongView({
                       e.dataTransfer.effectAllowed = 'move'
                       setRowDrag({ si: sectionIdx, ri: rowIdx })
                     }}
-                    onDragEnd={() => { setRowDrag(null); setRowDropIdx(null) }}
+                    onDragEnd={() => { setRowDrag(null); setRowDrop(null) }}
                   >⠿</span>
                   {showRhythm && (
                     <button

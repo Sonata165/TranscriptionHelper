@@ -56,6 +56,7 @@ export function parseSong(text: string): Song {
       else if (key === 'originalkey') meta.originalKey = value
       else if (key === 'key') meta.key = value
       else if (key === 'time') meta.time = value
+      else if (key === 'capo') meta.capo = parseInt(value, 10)
       else if (key === 'tempo') meta.tempo = parseInt(value, 10)
       continue
     }

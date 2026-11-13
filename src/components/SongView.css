@@ -44,13 +44,19 @@
   color: #222;
 }
 
+.plain-section-notes {
+  font-family: 'Georgia', serif;
+  font-style: italic;
+  color: #888;
+}
+
 .plain-chord-lyric-row {
   display: flex;
   white-space: pre;
 }
 
 .plain-chord-col {
-  min-width: 55%;
+  min-width: 60%;
   flex-shrink: 0;
   padding-right: 2em;
   box-sizing: border-box;

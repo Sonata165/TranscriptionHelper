@@ -3,6 +3,7 @@ export interface SongMeta {
   originalKey?: string  // original key, preserved during transposition
   key?: string          // current display key
   time?: string         // e.g. "4/4"
+  capo?: number
   tempo?: number
 }
 

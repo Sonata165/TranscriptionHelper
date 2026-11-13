@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import type { Song, RhythmSlot } from './parser/types'
+import type { Song, Section, RhythmSlot } from './parser/types'
 import { parseSong } from './parser/parse'
 import { serializeSong } from './parser/serialize'
 import { SongView } from './components/SongView'
@@ -18,6 +18,7 @@ export default function App() {
   const [showRhythm, setShowRhythm] = useState(false)
   const [song, setSong] = useState<Song>(initialSong)
   const [currentFile, setCurrentFile] = useState('autumn-leaves.chart')
+  const [compactView, setCompactView] = useState<boolean | undefined>(undefined)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const fileHandleRef = useRef<FileSystemFileHandle | null>(null)
   const dirHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
@@ -349,7 +350,8 @@ export default function App() {
     updateSong(prev => {
       const next = structuredClone(prev)
       const copy = structuredClone(next.sections[sectionIdx])
-      copy.name = copy.name + ' Copy'
+      const m = copy.name.match(/^(.*?)(\d+)$/)
+      copy.name = m ? m[1] + (parseInt(m[2], 10) + 1) : copy.name + ' Copy'
       next.sections.splice(sectionIdx + 1, 0, copy)
       return next
     })
@@ -365,16 +367,44 @@ export default function App() {
     })
   }
 
-  function onMoveRow(sectionIdx: number, fromIdx: number, toIdx: number) {
-    if (fromIdx === toIdx) return
+  function onMoveRow(fromSec: number, fromIdx: number, toSec: number, toIdx: number) {
+    if (fromSec === toSec && fromIdx === toIdx) return
     updateSong(prev => {
       const next = structuredClone(prev)
-      const sec = next.sections[sectionIdx]
-      const [movedChord] = sec.chords.splice(fromIdx, 1)
-      sec.chords.splice(toIdx, 0, movedChord)
-      if (sec.rhythm) { const [r] = sec.rhythm.splice(fromIdx, 1); sec.rhythm.splice(toIdx, 0, r) }
-      if (sec.lyric) { const [l] = sec.lyric.splice(fromIdx, 1); sec.lyric.splice(toIdx, 0, l) }
-      if (sec.melody) { const [m] = sec.melody.splice(fromIdx, 1); sec.melody.splice(toIdx, 0, m) }
+      const src = next.sections[fromSec]
+      const dst = next.sections[toSec]
+      if (!src || !dst || !src.chords[fromIdx]) return prev
+
+      // Pad parallel arrays so indices line up with chord rows
+      const pad = (sec: Section) => {
+        const n = sec.chords.length
+        if (sec.rhythm) while (sec.rhythm.length < n) sec.rhythm.push(sec.chords[sec.rhythm.length].map(() => ({ slots: Array(8).fill('-') })))
+        if (sec.lyric) while (sec.lyric.length < n) sec.lyric.push('')
+        if (sec.melody) while (sec.melody.length < n) sec.melody.push([])
+      }
+      pad(src)
+      pad(dst)
+
+      const [chords] = src.chords.splice(fromIdx, 1)
+      const rhythm = src.rhythm?.splice(fromIdx, 1)[0]
+      const lyric = src.lyric?.splice(fromIdx, 1)[0]
+      const melody = src.melody?.splice(fromIdx, 1)[0]
+
+      const at = Math.max(0, Math.min(toIdx, dst.chords.length))
+      const dstLenBefore = dst.chords.length
+      dst.chords.splice(at, 0, chords)
+      if (rhythm || dst.rhythm) {
+        dst.rhythm ??= dst.chords.filter((_, i) => i !== at).map(row => row.map(() => ({ slots: Array(8).fill('-') })))
+        dst.rhythm.splice(at, 0, rhythm ?? chords.map(() => ({ slots: Array(8).fill('-') })))
+      }
+      if (lyric !== undefined || dst.lyric) {
+        dst.lyric ??= Array(dstLenBefore).fill('')
+        dst.lyric.splice(at, 0, lyric ?? '')
+      }
+      if (melody || dst.melody) {
+        dst.melody ??= Array.from({ length: dstLenBefore }, () => [])
+        dst.melody.splice(at, 0, melody ?? [])
+      }
       return next
     })
   }
@@ -451,7 +481,7 @@ export default function App() {
     }
   }
 
-  function loadFromText(filename: string, text: string) {
+  function loadFromText(filename: string, text: string, isNew = false) {
     localStorage.setItem('transcribe-last-file', filename)
     filePathRef.current = `songs/${filename}`
     fileHandleRef.current = null
@@ -460,6 +490,7 @@ export default function App() {
     setSong(parsed)
     historyRef.current = []
     autoShowLyricMelody(parsed)
+    setCompactView(isNew ? false : true)
   }
 
   async function openSong() {
@@ -544,6 +575,15 @@ export default function App() {
     } catch { /* cancelled */ }
   }
 
+  // Format a section's chord rows so bar lines line up across rows:
+  // each measure column is padded to the widest measure in that column.
+  function formatChordLines(section: Section): string[] {
+    const cells = section.chords.map(row => row.map(m => (m.slots.length > 0 ? m.slots : ['-']).join(' ')))
+    const widths: number[] = []
+    for (const row of cells) row.forEach((c, j) => { widths[j] = Math.max(widths[j] ?? 6, c.length) })
+    return cells.map(row => '| ' + row.map((c, j) => c.padEnd(widths[j])).join(' | ') + ' |')
+  }
+
   async function exportChords() {
     const lines: string[] = []
     lines.push(song.meta.title)
@@ -553,13 +593,7 @@ export default function App() {
     lines.push('')
     for (const section of song.sections) {
       lines.push(`[${section.name}]`)
-      for (const row of section.chords) {
-        const measures = row.map(m => {
-          const tokens = m.slots.length > 0 ? m.slots : ['-']
-          return tokens.join(' ').padEnd(6)
-        })
-        lines.push('| ' + measures.join(' | ') + ' |')
-      }
+      lines.push(...formatChordLines(section))
       lines.push('')
     }
     const text = lines.join('\n')
@@ -585,13 +619,9 @@ export default function App() {
     lines.push('')
     for (const section of song.sections) {
       lines.push(`[${section.name}]`)
+      const chordLines = formatChordLines(section)
       for (let rowIdx = 0; rowIdx < section.chords.length; rowIdx++) {
-        const row = section.chords[rowIdx]
-        const measures = row.map(m => {
-          const tokens = m.slots.length > 0 ? m.slots : ['-']
-          return tokens.join(' ').padEnd(6)
-        })
-        lines.push('| ' + measures.join(' | ') + ' |')
+        lines.push(chordLines[rowIdx])
         const lyric = section.lyric?.[rowIdx]
         if (lyric) lines.push(lyric)
       }
@@ -621,13 +651,9 @@ export default function App() {
     lines.push('')
     for (const section of song.sections) {
       lines.push(`[${section.name}]`)
+      const chordLines = formatChordLines(section)
       for (let rowIdx = 0; rowIdx < section.chords.length; rowIdx++) {
-        const row = section.chords[rowIdx]
-        const measures = row.map(m => {
-          const tokens = m.slots.length > 0 ? m.slots : ['-']
-          return tokens.join(' ').padEnd(6)
-        })
-        lines.push('| ' + measures.join(' | ') + ' |')
+        lines.push(chordLines[rowIdx])
         const melodyRow = section.melody?.[rowIdx]
         const melodyStr = melodyRow?.filter(m => m).join(' ') ?? ''
         if (melodyStr) lines.push(melodyStr)
@@ -658,20 +684,16 @@ export default function App() {
     for (const section of song.sections) {
       const label = section.key ? `[${section.name}] (${section.key})` : `[${section.name}]`
       lines.push(label)
+      const chordLines = formatChordLines(section)
+      const sideCol = Math.max(40, ...chordLines.map(l => l.length)) + 4
       for (let rowIdx = 0; rowIdx < section.chords.length; rowIdx++) {
-        const row = section.chords[rowIdx]
-        const measures = row.map(m => {
-          const tokens = m.slots.length > 0 ? m.slots : ['-']
-          return tokens.join(' ').padEnd(6)
-        })
-        let line = '| ' + measures.join(' | ') + ' |'
+        let line = chordLines[rowIdx]
         const lyric = showLyric ? (section.lyric?.[rowIdx] || '') : ''
         const melodyRow = showMelody ? section.melody?.[rowIdx] : undefined
         const melodyStr = melodyRow?.filter(m => m).join(' ') ?? ''
         const sideText = lyric || melodyStr
         if (sideText) {
-          const pad = Math.max(0, 40 - line.length)
-          line += ' '.repeat(pad + 4) + sideText
+          line = line.padEnd(sideCol) + sideText
         }
         lines.push(line)
       }
@@ -718,7 +740,8 @@ export default function App() {
         <FileSidebar
           currentFile={currentFile}
           currentTitle={song.meta.title}
-          onOpen={(filename, content) => loadFromText(filename, content)}
+          onOpen={(filename, content) => loadFromText(filename, content, false)}
+          onNew={(filename, content) => loadFromText(filename, content, true)}
           onSave={saveSong}
           onSuppressSave={(suppress) => { suppressSaveRef.current = suppress }}
         />
@@ -749,8 +772,12 @@ export default function App() {
             onMetaChange={(field, value) => updateSong(prev => {
               const next = structuredClone(prev)
               if (field === 'key') next.meta.key = value || undefined
-              else if (field === 'originalKey') next.meta.originalKey = value || undefined
+              else if (field === 'originalKey') {
+                next.meta.originalKey = value || undefined
+                if (value && !next.meta.key) next.meta.key = value
+              }
               else if (field === 'time') next.meta.time = value || undefined
+              else if (field === 'capo') next.meta.capo = value ? parseInt(value, 10) : undefined
               else if (field === 'tempo') next.meta.tempo = value ? parseInt(value, 10) : undefined
               return next
             })}
@@ -760,6 +787,7 @@ export default function App() {
             onMoveRow={onMoveRow}
             onSectionTranspose={onSectionTranspose}
             onSectionKeyChange={onSectionKeyChange}
+            compactView={compactView}
           />
         </main>
       </div>
